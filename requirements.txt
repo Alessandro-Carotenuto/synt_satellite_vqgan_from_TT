@@ -1,9 +1,12 @@
 #Dependency list for the project. Please install the required packages using pip.
 #It installs the most recent versions of the packages. If you want to install specific versions, you can uncomment the version numbers.
 
+#PyTorch and related libraries
 torch               # ==1.7.0
 torchvision         # ==0.8.1
 pytorch-lightning   # ==1.0.8
+
+#Other dependencies
 albumentations      # ==0.4.3
 opencv-python       # ==4.1.2.30
 omegaconf           # ==2.0.0
