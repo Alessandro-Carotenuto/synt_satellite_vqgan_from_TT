@@ -15,4 +15,4 @@ transformers        # ==4.3.1
 imageio             # ==2.9.0
 streamlit           # >=0.73.1
 tensorboard         # ==2.2.0
-
+PyYAML
