@@ -106,7 +106,7 @@ class CVUSAPreprocessor:
             """
             
             # Check structure first (this only reads first 5 rows for inspection)
-            result = check_csv_structure(input_csv_path)
+            result = CVUSAPreprocessor.check_csv_structure(input_csv_path)
             if result[0] is None:
                 return None
             
@@ -214,13 +214,13 @@ class CVUSAPreprocessor:
             
             # Process training CSV
             print("\n📚 TRAINING CSV:")
-            train_result = fix_csv_paths(train_csv_path)
+            train_result = CVUSAPreprocessor.fix_csv_paths(train_csv_path)
             
             print("\n" + "="*60)
             
             # Process test CSV
             print("\n🧪 TEST CSV:")
-            test_result = fix_csv_paths(test_csv_path)
+            test_result = CVUSAPreprocessor.fix_csv_paths(test_csv_path)
             
             print("\n" + "="*60)
             print("✅ Both CSV files processed successfully!")
@@ -254,14 +254,14 @@ class CVUSAPreprocessor:
             
             # Check structure of both files
             print("Checking CSV structures...")
-            check_csv_structure(train_csv)
+            CVUSAPreprocessor.check_csv_structure(train_csv)
             print("\n" + "="*40)
-            check_csv_structure(test_csv)
+            CVUSAPreprocessor.check_csv_structure(test_csv)
             
             print("\n" + "="*60)
             
             # Process both files - saves to CVUSA_subset/
-            train_result, test_result = process_train_test_csvs(train_csv, test_csv)
+            train_result, test_result = CVUSAPreprocessor.process_train_test_csvs(train_csv, test_csv)
             
             # Print the final file locations
             print(f"\n📁 Fixed files saved to:")

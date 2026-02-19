@@ -3,7 +3,7 @@ import urllib.request
 import yaml
 from taming.models.vqgan import VQModel
 import torch
-from OmegaConf import OmegaConf
+from omegaconf import OmegaConf
 
 
 def download_taming_vqgan(version=16, kaggle_flag=False):  #Download the VQGAN model files and return their file paths
@@ -136,3 +136,30 @@ def create_config(configpath):
 
     return complete_system_configuration, device
 
+def manual_forward_pass(model, satellite_imgs, ground_imgs):
+
+    # THIS IS A REWRITE OF THE FORWARD PASS LOGIC FROM THE TRAINING LOOP, 
+    # IT IS REWRITTEN TO FIX AN ISSUE WITH THE SHAPES OF THE ENCODED INDICES,
+    # AND TO SHOW HOW TO MANUALLY PERFORM THE FORWARD PASS THROUGH THE MODEL.
+
+    #WE ARE CALLING METHODS FROM THE Net2NetTransformer CLASS TO ENCODE THE IMAGES INTO LATENT REPRESENTATION INDICES,
+
+    # GET RAW ENCODED INDICES AND THEN RESHAPE THEM TO THE CORRECT SHAPE FOR THE TRANSFORMER
+    # ENCODING IS: WE GET LATENT SPACE, THEN WE GO THROUGH VECTOR QUANTIZATION AND MATCH THE VECTOR TO THE CLOSEST CODEBOOKS ENTRIES
+
+    _, z_indices_raw = model.encode_to_z(satellite_imgs)    # ENCODE SATELLITE IMGs -> LATENT REPRESENTATION INDICES, WE GET RAW INDICES WITHOUT RESHAPING
+    _, c_indices_raw = model.encode_to_c(ground_imgs)       # ENCODE GROUND IMGs -> LATENT REPRESENTATION INDICES, WE GET RAW INDICES WITHOUT RESHAPING
+    
+    # THOSE RETURN 1D VECTOR OF INDICES, WE NEED TO RESHAPE THEM TO (BATCH_SIZE, NUM_TOKENS) FOR THE TRANSFORMER
+
+    batch_size = satellite_imgs.shape[0]                    # WE GET THE BATCH SIZE FROM THE INPUT IMAGES, ASSUMING THE FIRST DIMENSION IS THE BATCH SIZE
+    z_indices = z_indices_raw.view(batch_size, -1)          # RESHAPE (BATCH_SIZE, NUM_TOKENS), -1 INFER THE SECOND DIMENSION BASED ON THE NUMBER OF ELEM
+    c_indices = c_indices_raw.view(batch_size, -1)
+    
+    # Manual forward pass logic (from STEP-CHECKPOINT)
+    cz_indices = torch.cat((c_indices, z_indices), dim=1)   # CONCATENATES TOKENS
+    logits, _ = model.transformer(cz_indices[:, :-1])       # INTO THE TRANSFORMER; EXCEPT LAST TOKEN , WHICH WE WANT TO PREDICT
+    logits = logits[:, c_indices.shape[1]-1:]               # SLICE OFF THE GROUND PREFIX TOKENS TO GET ONLY THE SATELLITE PART OF THE LOGITS, WHICH SHOULD MATCH THE SHAPE OF z_indices
+    target = z_indices                                      # TARGET IS THE ORIGINAL z_indices, WHICH WE WANT TO PREDICT WITH THE LOGITS FROM THE TRANSFORMER
+    
+    return logits, target

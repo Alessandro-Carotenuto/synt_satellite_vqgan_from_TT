@@ -5,12 +5,12 @@ from taming.models.cond_transformer import Net2NetTransformer
 
 
 def main():
-    fix_torch_import_issue(kaggle_flag=False)  # Set to True if running in Kaggle environment
+    fix_torch_import_issue(kaggle_flag=False)                                               # Set to True if running in Kaggle environment
     [configpath, checkpointpath] = download_taming_vqgan(version=16, kaggle_flag=False)     # Set to True if running in Kaggle environment
     pretrained_vqgan = load_vqgan_model(configpath, checkpointpath)                         # Load the VQGAN model using the downloaded files
     fullsystem_config, device = create_config(configpath)                                   # Create the complete system config and choose device
     fix_inject_top_k_p_filtering()                                                          # Inject filtering function into transformers module to fix import
-    vqgan_state = torch.load("/kaggle/working/models/vqgan_imagenet_f16_16384.ckpt",        # Load checkpoint with explicit weights_only=False
+    vqgan_state = torch.load(checkpointpath,                                                # Load checkpoint with explicit weights_only=False
                         map_location=device, # Ensure the checkpoint is loaded on the correct device
                         weights_only=False)  # This is important to load the full checkpoint not just the model weights. Possible resuming training if needed.
     
@@ -57,5 +57,7 @@ def main():
     print(f"VQ-GAN trainable parameters: {vqgan_params}")
     print(f"Transformer trainable parameters: {transformer_params}")
 
-    main()
+    #Move model to GPU if GPU is available
+    model = model.to(device)
+    print("Model moved to",device)
 
