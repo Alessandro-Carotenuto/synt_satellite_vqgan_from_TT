@@ -3,8 +3,6 @@ import os
 from pathlib import Path
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
-import cv2
-import numpy as np
 import torch
 import torchvision.transforms as transforms
 
@@ -345,11 +343,6 @@ class CVUSADataset(Dataset):
             # Load images
             satellite_img = Image.open(satellite_path).convert('RGB')
             ground_img = Image.open(ground_path).convert('RGB')
-
-            sat_array = cv2.resize(np.array(satellite_img), (256, 256), interpolation=cv2.INTER_AREA)
-            ground_array = cv2.resize(np.array(ground_img), (256, 256), interpolation=cv2.INTER_AREA)
-            satellite_img = Image.fromarray(sat_array)
-            ground_img = Image.fromarray(ground_array)
             
             # --- MODIFIED: Apply the correct transform to each image ---
             satellite_tensor = self.satellite_transform(satellite_img)
@@ -367,18 +360,19 @@ class CVUSADataset(Dataset):
 
        
     @classmethod
-    def create_dataloaders(cls, data_root, batch_size=8, polar=True, 
-                          train_csv=None, test_csv=None):
+    def create_dataloaders(cls, data_root, batch_size=8, polar=True,
+                        train_csv=None, test_csv=None, kaggle_flag=False):
         """Factory method to create train/test dataloaders"""
+        
         if train_csv is None:
-            train_csv = "/kaggle/working/train-19zl_fixed.csv"
+            train_csv = "/kaggle/working/train-19zl_fixed.csv" if kaggle_flag else "CVUSA_subset/train-19zl_fixed.csv"
         if test_csv is None:
-            test_csv = "/kaggle/working/val-19zl_fixed.csv"
-            
+            test_csv = "/kaggle/working/val-19zl_fixed.csv" if kaggle_flag else "CVUSA_subset/val-19zl_fixed.csv"
+
         train_dataset = cls(train_csv, data_root, 256, polar, is_train=True)
-        test_dataset = cls(test_csv, data_root, 256, polar, is_train=False)
-        
+        test_dataset  = cls(test_csv,  data_root, 256, polar, is_train=False)
+
         train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
-        test_loader = DataLoader(test_dataset, batch_size, shuffle=False)
-        
+        test_loader  = DataLoader(test_dataset,  batch_size, shuffle=False)
+
         return train_loader, test_loader

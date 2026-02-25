@@ -1,4 +1,5 @@
 import torch
+import os
 from fixermodule import fix_torch_import_issue, fix_inject_top_k_p_filtering
 from taming_interface import download_taming_vqgan, create_config, save_checkpoint
 from taming.models.cond_transformer import Net2NetTransformer
@@ -6,6 +7,7 @@ from taming_interface import manual_forward_pass
 import torch.nn.functional as F 
 from torch.cuda.amp import autocast, GradScaler
 from torch.optim.lr_scheduler import CosineAnnealingLR
+import torch.optim as optim 
 
 
 def train_one_epoch(model, train_dataloader, optimizer, scaler, device):
@@ -102,7 +104,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
     # Optimizer with weight decay for regularization
     optimizer = optim.AdamW(model.transformer.parameters(), lr=lr, betas=(0.9, 0.95), weight_decay=0.1) #weight decay 0.01 was not enough
     scaler = GradScaler()                                                                               #create the scaler
-    scheduler = CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)                                #Cosine Annealing for LR Scheduling
+    scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6)                                #Cosine Annealing for LR Scheduling
     
     print(f"Starting training for {num_epochs} epochs...")
     print(f"Training set: {len(train_dataloader)} batches")

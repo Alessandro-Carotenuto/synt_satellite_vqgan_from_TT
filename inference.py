@@ -13,7 +13,7 @@ def tensor_to_displayable(tensor):
         return img.permute(1, 2, 0).clamp(0, 1)
 
 
-def single_image_inference(model, ground_image_path, device=device, temperature=1.0, top_k=600, top_p=0.92, save_image=False, nameadd=""):
+def single_image_inference(model, ground_image_path, device='cpu', temperature=1.0, top_k=600, top_p=0.92, save_image=False, nameadd=""):
 
     
     # Load and preprocess the ground image
