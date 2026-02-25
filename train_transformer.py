@@ -1,13 +1,52 @@
 import torch
 from fixermodule import fix_torch_import_issue, fix_inject_top_k_p_filtering
-from taming_interface import download_taming_vqgan, load_vqgan_model, create_config
+from taming_interface import download_taming_vqgan, create_config
 from taming.models.cond_transformer import Net2NetTransformer
+from taming_interface import manual_forward_pass
+import torch.nn.functional as F 
+
+def train_one_epoch(model, train_dataloader, optimizer, scaler, device):
+    """Train for one epoch and return average loss"""
+    model.train()           #Set Training mode
+    epoch_loss = 0          #Starting Loss
+    num_batches = 0         #Starting Batch?
+    
+    for batch_idx, batch in enumerate(train_dataloader):
+        # Move to device
+        ground_imgs = batch['ground'].to(device)
+        satellite_imgs = batch['satellite'].to(device)
+        
+        # Forward pass with mixed precision
+        with autocast():
+            logits, target = manual_forward_pass(model, satellite_imgs, ground_imgs)
+            loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), target.reshape(-1),label_smoothing=0.1)
+        
+        # Backward pass with gradient scaling
+        optimizer.zero_grad()
+        scaler.scale(loss).backward()
+        
+        scaler.unscale_(optimizer)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        
+        scaler.step(optimizer)
+        scaler.update()
+        
+        # Track loss
+        epoch_loss += loss.item()
+        num_batches += 1
+        
+        # Print progress every 50 batches
+        if batch_idx % 50 == 0:
+            print(f"  Batch {batch_idx}, Loss: {loss.item():.4f}")
+    
+    return epoch_loss / num_batches
+
 
 
 def main():
     fix_torch_import_issue(kaggle_flag=False)                                               # Set to True if running in Kaggle environment
     [configpath, checkpointpath] = download_taming_vqgan(version=16, kaggle_flag=False)     # Set to True if running in Kaggle environment
-    pretrained_vqgan = load_vqgan_model(configpath, checkpointpath)                         # Load the VQGAN model using the downloaded files
+    #pretrained_vqgan = load_vqgan_model(configpath, checkpointpath)                         # Load the VQGAN model using the downloaded files
     fullsystem_config, device = create_config(configpath)                                   # Create the complete system config and choose device
     fix_inject_top_k_p_filtering()                                                          # Inject filtering function into transformers module to fix import
     vqgan_state = torch.load(checkpointpath,                                                # Load checkpoint with explicit weights_only=False
@@ -39,6 +78,7 @@ def main():
     # We load the checkpoint manually with the correct map_location and weights_only settings to ensure it works correctly on our device.
     model.first_stage_model.load_state_dict(vqgan_state["state_dict"], strict=False) 
     print("Model created and VQ-GAN weights loaded successfully!")
+    del vqgan_state #clean variable of the vqgan weights
 
     #Freeze the VQ-GAN parameters
     # We freeze the VQ-GAN parameters because we are not training the VQ-GAN, we are only using it for inference to encode and decode images.

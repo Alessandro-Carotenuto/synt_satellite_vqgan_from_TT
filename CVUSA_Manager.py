@@ -29,7 +29,7 @@ class CVUSAPreprocessor:
         It uses only built-in libraries (csv, os) to read, analyze, and write CSV files without pandas.
         """
         @staticmethod
-        def check_csv_structure(csv_path):
+        def check_csv_structure(csv_path): 
             """
             Check the structure of the CSV file and print sample rows (no pandas)
             """

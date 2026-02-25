@@ -4,6 +4,7 @@ import urllib.request
 import yaml
 from datetime import datetime
 from taming.models.vqgan import VQModel
+from taming.models.cond_transformer import Net2NetTransformer
 import torch
 from omegaconf import OmegaConf
 
@@ -57,7 +58,7 @@ def create_config(configpath):
         
         # FIRST STAGE CONFIG ------------------------------------------------
 
-        "first_stage_config": {vqgan_yaml_config['model']}, #Same VQ-GAN configuration for the first stage.
+        "first_stage_config": vqgan_yaml_config['model'], #Same VQ-GAN configuration for the first stage.
         
         # CONDITIONAL STAGE CONFIG --------------------------------------------
         # cond_stage_config is setting the conditional stage to use the same VQ-GAN for both images (input and target)
@@ -86,7 +87,7 @@ def create_config(configpath):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Using device: {device}")
 
-    return complete_system_configuration, devic
+    return complete_system_configuration, device
 
 # VQ-GAN DOWNLOADING, LOADING AND CHECKPOINTING FUNCTIONS
 def download_taming_vqgan(version=16, kaggle_flag=False):  
@@ -292,7 +293,7 @@ def find_latest_checkpoint(base_name, save_dir=None):
         raise FileNotFoundError(f"Directory not found: {save_dir}")
     
     # Use glob to find all files matching the pattern, then sort by modification time to get the latest one
-    matches = glob.glob(os.path.join(save_dir, f"{base_name}*.pth"))
+    matches = glob(os.path.join(save_dir, f"{base_name}*.pth"))
     
     # If no matches found, raise an error
     if not matches:
