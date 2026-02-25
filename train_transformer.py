@@ -3,7 +3,7 @@ import os
 from fixermodule import fix_torch_import_issue, fix_inject_top_k_p_filtering
 from taming_interface import download_taming_vqgan, create_config, save_checkpoint
 from taming.models.cond_transformer import Net2NetTransformer
-from taming_interface import manual_forward_pass
+from taming_interface import manual_forward_pass, freeze_vqgan
 import torch.nn.functional as F 
 from torch.cuda.amp import autocast, GradScaler
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -97,7 +97,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
     Modified training with train/test split and overfitting detection
     """
     # Setup training parameters with weight decay
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = getDevice()
     model = model.to(device)
     model = torch.compile(model)  # Can give 10-20% speedup
     
@@ -237,9 +237,7 @@ def main():
     del vqgan_state #clean variable of the vqgan weights
 
     #Freeze the VQ-GAN parameters
-    # We freeze the VQ-GAN parameters because we are not training the VQ-GAN, we are only using it for inference to encode and decode images.
-    for param in model.first_stage_model.parameters():  
-        param.requires_grad = False # requires_grad=false means that we do not want to compute gradients for these parameters during backpropagation
+    freeze_vqgan(model)
 
     # Since cond_stage_model is the same as first_stage_model, it's already frozen, we don't need to freeze it again.
     # Otherwise we would write:

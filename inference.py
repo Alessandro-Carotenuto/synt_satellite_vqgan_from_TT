@@ -4,6 +4,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import os
 from fixermodule import top_k_top_p_filtering
+from CVUSA_Manager import get_standard_transform
 
 
 # Convert tensors back to PIL images for display
@@ -20,11 +21,7 @@ def single_image_inference(model, ground_image_path, device='cpu', temperature=1
     ground_pil = Image.open(ground_image_path).convert('RGB')
     
     # Use same transform as your training
-    transform = transforms.Compose([
-        transforms.Resize((256, 256)),                              
-        transforms.ToTensor(),
-        transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
-    ])
+    transform = get_standard_transform()
     
     ground_tensor = transform(ground_pil).unsqueeze(0).to(device)  # Add batch dimension
     

@@ -6,6 +6,13 @@ from PIL import Image
 import torch
 import torchvision.transforms as transforms
 
+def get_standard_transform(size=256):
+    """Standard image transform: resize, normalize to [-1, 1]"""
+    return transforms.Compose([
+        transforms.Resize((size, size)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+    ])
 
 def load_csv_data(csv_path):
     """
@@ -306,11 +313,7 @@ class CVUSADataset(Dataset):
         # --- MODIFIED: Create separate transform pipelines ---
         
         # Pipeline for TARGET images (Satellite). ALWAYS without augmentation.
-        self.satellite_transform = transforms.Compose([
-            transforms.Resize((size, size)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
-        ])
+        self.satellite_transform = get_standard_transform(size)
 
         # Pipeline for INPUT images (Ground). Augmentation is applied ONLY if is_train=True.
         if is_train:

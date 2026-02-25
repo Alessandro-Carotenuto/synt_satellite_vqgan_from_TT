@@ -8,6 +8,9 @@ from taming.models.cond_transformer import Net2NetTransformer
 import torch
 from omegaconf import OmegaConf
 
+def getDevice():
+    return 'cuda' if torch.cuda.is_available() else 'cpu'
+
 # CREATE CONFIG FUNCTION
 def create_config(configpath):
     #THE YAML FILE HAS THE FOLLOWING STRUCTURE:
@@ -84,7 +87,7 @@ def create_config(configpath):
     })
 
     # Define device 
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = getDevice()
     print(f"Using device: {device}")
 
     return complete_system_configuration, device
@@ -123,6 +126,7 @@ def download_taming_vqgan(version=16, kaggle_flag=False):
         
     return filepaths
 
+#LOAD VQGAN
 def load_vqgan_model(config_path, checkpoint_path):
     # Load config with regular yaml
     with open(config_path, 'r') as f:
@@ -139,8 +143,13 @@ def load_vqgan_model(config_path, checkpoint_path):
     #set like that cause we are not training the model, we are just using it for inference, so we want it to behave differently than during training
     return model
 
-# MANUAL FORWARD PASS FUNCTION
+#FREEZE VQGAN
+def freeze_vqgan(model):
+# We freeze the VQ-GAN parameters because we are not training the VQ-GAN, we are only using it for inference to encode and decode images.
+    for param in model.first_stage_model.parameters():
+        param.requires_grad = False # requires_grad=false means that we do not want to compute gradients for these parameters during backpropagation
 
+# MANUAL FORWARD PASS FUNCTION
 def manual_forward_pass(model, satellite_imgs, ground_imgs):
     
 
@@ -212,8 +221,7 @@ def load_saved_model(checkpoint_path, vqgan_checkpoint_path=None, kaggle_flag=Fa
     then load the saved transformer weights on top.
     """
     
-    # Define device
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
     
     # Load checkpoint
     if not os.path.exists(checkpoint_path):
@@ -249,8 +257,7 @@ def load_saved_model(checkpoint_path, vqgan_checkpoint_path=None, kaggle_flag=Fa
     # Load VQGAN weights and freeze
     vqgan_state = torch.load(vqgan_checkpoint_path, map_location=device, weights_only=False)
     model.first_stage_model.load_state_dict(vqgan_state["state_dict"], strict=False)
-    for param in model.first_stage_model.parameters():
-        param.requires_grad = False
+    freeze_vqgan(model)
     print("✅ VQGAN loaded and frozen from checkpoint:", vqgan_checkpoint_path)
 
     # Load transformer weights
