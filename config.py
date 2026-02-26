@@ -8,7 +8,7 @@ import os
 KAGGLE_FLAG = "KAGGLE_KERNEL_RUN_TYPE" in os.environ
 
 if KAGGLE_FLAG:
-    DATA_ROOT = "/kaggle/input/cvusa-subset-csvfixed"
+    DATA_ROOT = "/kaggle/input/datasets/carotenutoalessandro/cvusa-subset-csvfixed"
 else:
     DATA_ROOT = "CVUSA_subset_csvfixed"
 
