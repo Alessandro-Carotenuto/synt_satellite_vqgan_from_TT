@@ -70,8 +70,8 @@ python setup.py
 
 **Kaggle:**
 ```python
-!git clone https://github.com/Alessandro-Carotenuto/ground2satellite.git
-%cd ground2satellite
+!git clone https://github.com/Alessandro-Carotenuto/synt_satellite_vqgan_from_TT
+%cd synt_satellite_vqgan_from_TT
 !python setup.py
 ```
 
