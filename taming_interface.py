@@ -8,8 +8,48 @@ from taming.models.cond_transformer import Net2NetTransformer
 import torch
 from omegaconf import OmegaConf
 
+# GET AVAILABLE DEVICE
 def getDevice():
     return 'cuda' if torch.cuda.is_available() else 'cpu'
+
+# BUILD THE REAL MODEL
+def build_model(configpath, vqgan_checkpoint_path, device):
+    """
+    Build and return the full Net2NetTransformer model with VQGAN loaded and frozen.
+    """
+    fullsystem_config, device = create_config(configpath)
+    
+    # Modify config to not load checkpoint automatically:
+    # Because we are loading the checkpoint manually with the correct map_location and weights_only settings,
+    # we want to prevent the config from trying to load it again with potentially incorrect settings.
+    # This gives us more control over how the checkpoint is loaded and ensures it works correctly on our device.
+    fullsystem_config_no_ckpt = fullsystem_config.copy()                   # Create a copy of the full config to modify      
+    fullsystem_config_no_ckpt.first_stage_config.params.ckpt_path = None   # Set the checkpoint path to None to prevent automatic loading by the config
+
+    # Create model without loading checkpoint
+    # Net2Net transformer is the main model that combines the VQGAN and the transformer for training.
+    # is a class from the code from the repo of Taming-transformers that we are using to create our model. 
+    # It takes the configurations for the transformer, the first stage (VQGAN), and the conditioning stage, and initializes the model accordingly.
+    model = Net2NetTransformer(
+        transformer_config=fullsystem_config.transformer_config,            # Use the original transformer config, we are not modifying it
+        first_stage_config=fullsystem_config_no_ckpt.first_stage_config,    # Modified Config, cause we are loading manually 
+        cond_stage_config=fullsystem_config.cond_stage_config,              # Use the original conditioning stage config, we are not modifying it
+        first_stage_key="satellite",                                        # This is the key to access VQGAN output
+        cond_stage_key="ground",                                            # This is the key to access conditioning stage output   
+        unconditional=False                                                 # We are not using unconditional training, we use conditioning information
+    )
+
+    # Load checkpoint with explicit weights_only=False
+    # We load the checkpoint manually with the correct map_location and weights_only settings to ensure it works correctly on our device.
+    vqgan_state = torch.load(vqgan_checkpoint_path, map_location=device, weights_only=False)
+    model.first_stage_model.load_state_dict(vqgan_state["state_dict"], strict=False)
+    del vqgan_state  # Clean up the variable to free memory
+
+    # Freeze the VQ-GAN parameters
+    freeze_vqgan(model)
+    
+    print("Model built, VQGAN loaded and frozen successfully!")
+    return model, fullsystem_config, device
 
 # CREATE CONFIG FUNCTION
 def create_config(configpath):
@@ -239,26 +279,8 @@ def load_saved_model(checkpoint_path, vqgan_checkpoint_path=None, kaggle_flag=Fa
         # Still need the config path
         [configpath, _] = download_taming_vqgan(version=16, kaggle_flag=kaggle_flag)
     
-    # Rebuild model — same as train_transformer.py
-    fullsystem_config, device = create_config(configpath)                   # Create the complete system config and choose device
-    fullsystem_config_no_ckpt = fullsystem_config.copy()                    # Create a copy of the full config to modify
-    fullsystem_config_no_ckpt.first_stage_config.params.ckpt_path = None    # Set the checkpoint path to None to prevent automatic loading by the config
-
-    # Rebuild the model using the same configuration, but with the modified config that does not load the checkpoint automatically
-    model = Net2NetTransformer(                                             
-        transformer_config=fullsystem_config.transformer_config,
-        first_stage_config=fullsystem_config_no_ckpt.first_stage_config,
-        cond_stage_config=fullsystem_config.cond_stage_config,
-        first_stage_key="satellite",
-        cond_stage_key="ground",
-        unconditional=False
-    )
-
-    # Load VQGAN weights and freeze
-    vqgan_state = torch.load(vqgan_checkpoint_path, map_location=device, weights_only=False)
-    model.first_stage_model.load_state_dict(vqgan_state["state_dict"], strict=False)
-    freeze_vqgan(model)
-    print("✅ VQGAN loaded and frozen from checkpoint:", vqgan_checkpoint_path)
+    # Rebuild model
+    model, _, device = build_model(configpath, vqgan_checkpoint_path, device)
 
     # Load transformer weights
     model.transformer.load_state_dict(checkpoint['transformer_state_dict'])
