@@ -44,10 +44,10 @@ Use the pre-processed dataset available on Kaggle, with CSV files already fixed:
 
 ### Local setup
 
-Download the dataset and place it in a `CVUSA_subset/` folder in the project root:
+Download the dataset and place it in a `CVUSA_subset_csvfixed/` folder in the project root:
 
 ```
-CVUSA_subset/
+CVUSA_subset_csvfixed/
 ├── train-19zl_fixed.csv
 ├── val-19zl_fixed.csv
 ├── streetview/
@@ -89,7 +89,7 @@ KAGGLE_FLAG = "KAGGLE_KERNEL_RUN_TYPE" in os.environ  # automatic, don't touch
 if KAGGLE_FLAG:
     DATA_ROOT = "/kaggle/input/cvusa-subset-csvfixed"
 else:
-    DATA_ROOT = "CVUSA_subset"
+    DATA_ROOT = "CVUSA_subset_csvfixed"
 
 NUM_EPOCHS    = 75
 LEARNING_RATE = 5e-4
@@ -139,7 +139,7 @@ from inference import single_image_inference
 
 single_image_inference(
     model,
-    "CVUSA_subset/streetview/0000001.jpg",
+    "CVUSA_subset_csvfixed/streetview/0000001.jpg",
     device=device,
     temperature=1.0,   # lower = more deterministic, higher = more varied
     top_k=600,

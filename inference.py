@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 from fixermodule import top_k_top_p_filtering
 from CVUSA_Manager import get_standard_transform
+import csv
 
 
 
@@ -128,13 +129,3 @@ def test_inference(model, data_root, device='cpu'):
         print(f"\n--- Image {idx + 1}: {os.path.basename(ground_path)} ---")
         single_image_inference(model, ground_path, device=device)
     """Run inference on the first 5 images of the val set"""
-    
-    with open(csv_path, 'r', newline='', encoding='utf-8') as f:
-        reader = csv.reader(f)
-        next(reader)  # skip header
-        rows = list(reader)[:5]
-    
-    for idx, row in enumerate(rows):
-        ground_path = os.path.join(data_root, row[1])
-        print(f"\n--- Image {idx + 1}: {os.path.basename(ground_path)} ---")
-        single_image_inference(model, ground_path, device=device)
