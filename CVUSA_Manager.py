@@ -5,6 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 import torch
 import torchvision.transforms as transforms
+import config
 
 def get_standard_transform(size=256):
     """Standard image transform: resize, normalize to [-1, 1]"""
@@ -239,8 +240,8 @@ class CVUSAPreprocessor:
             
             # Local file paths - CVUSA_subset in same directory as script
             data_dir = script_dir / "cvusa-subset-csvfixed"
-            train_csv = os.path.join(data_root, "train-19zl_fixed.csv")
-            test_csv  = os.path.join(data_root, "val-19zl_fixed.csv")
+            train_csv = os.path.join(config.DATA_ROOT, "train-19zl_fixed.csv")
+            test_csv  = os.path.join(config.DATA_ROOT, "val-19zl_fixed.csv")
             
             # Check if directory exists
             if not data_dir.exists():
@@ -318,6 +319,7 @@ class CVUSADataset(Dataset):
         # Pipeline for INPUT images (Ground). Augmentation is applied ONLY if is_train=True.
         if is_train:
             self.ground_transform = transforms.Compose([
+                transforms.Resize((size, size)),
                 transforms.RandomApply([
                     transforms.RandomAffine(degrees=5, translate=(0.05, 0.05)),
                     transforms.RandomPerspective(distortion_scale=0.3, p=0.5)

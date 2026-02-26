@@ -208,3 +208,6 @@ def main():
     )
 
     train_model_with_evaluation(model, train_loader, test_loader, num_epochs=config.NUM_EPOCHS, lr=config.LEARNING_RATE)
+
+if __name__ == "__main__":
+    main()
