@@ -13,25 +13,6 @@ from omegaconf import OmegaConf
 def getDevice():
     return 'cuda' if torch.cuda.is_available() else 'cpu'
 
-# SETUP TAMING 
-def setup_taming(kaggle_flag=False):
-    """Clone and install taming-transformers if not already present"""
-    import subprocess
-    
-    if kaggle_flag:
-        taming_dir = '/kaggle/working/taming-transformers'
-    else:
-        taming_dir = 'taming-transformers'
-    
-    if not os.path.exists(taming_dir):
-        print("Cloning taming-transformers...")
-        subprocess.run(['git', 'clone', 
-                       'https://github.com/CompVis/taming-transformers.git',
-                       taming_dir], check=True)
-    
-    subprocess.run(['pip', 'install', '-e', taming_dir], check=True)
-    print("taming-transformers ready!")
-
 # BUILD THE REAL MODEL
 def build_model(configpath, vqgan_checkpoint_path, device):
     """

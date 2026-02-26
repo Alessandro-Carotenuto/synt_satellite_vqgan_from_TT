@@ -29,7 +29,7 @@ At inference time, a street photo is encoded into 256 tokens, the transformer au
 ├── taming_interface.py     # Model building, checkpointing, VQGAN interface
 ├── CVUSA_Manager.py        # Dataset loading
 ├── fixermodule.py          # Compatibility fixes for taming-transformers
-├── setup.py                # Environment setup script (local alternative)
+├── setup.py                # Environment setup script
 ├── requirements.txt        # Dependencies
 └── CVUSA_subset/           # Dataset directory (local only, see below)
 ```
@@ -63,22 +63,17 @@ Import the dataset in your Kaggle notebook. It will be available automatically a
 
 ## Setup
 
-Dependencies, taming-transformers, and the VQGAN weights are all downloaded automatically on first run — no manual setup required.
-
-**Local** — optionally edit `config.py` first, then:
+**Local:**
 ```bash
-python train_transformer.py
+python setup.py
 ```
 
-**Kaggle** — everything is detected and configured automatically. Optionally override parameters before running:
+**Kaggle:**
 ```python
-import config
-config.NUM_EPOCHS = 100   # only needed if you want to change the defaults
-config.BATCH_SIZE = 16
-
-import train_transformer
-train_transformer.main()
+!python setup.py
 ```
+
+This installs all dependencies and clones taming-transformers. Optionally edit `config.py` before training (see Configuration).
 
 ---
 
@@ -96,9 +91,27 @@ LEARNING_RATE = 5e-4
 BATCH_SIZE    = 8
 ```
 
+On Kaggle, override parameters directly before running:
+```python
+import config
+config.NUM_EPOCHS = 100   # only needed if you want to change the defaults
+config.BATCH_SIZE = 16
+```
+
 ---
 
 ## Training
+
+**Local:**
+```bash
+python train_transformer.py
+```
+
+**Kaggle:**
+```python
+import train_transformer
+train_transformer.main()
+```
 
 Checkpoints are saved automatically in the working directory:
 - **Best model** — saved every time test loss improves, previous one deleted
@@ -145,7 +158,7 @@ test_inference(model, data_root=config.DATA_ROOT, device=device)
 
 - Python 3.8+
 - CUDA-capable GPU recommended
-- [taming-transformers](https://github.com/CompVis/taming-transformers) (installed automatically on first run)
+- [taming-transformers](https://github.com/CompVis/taming-transformers) (installed automatically by `setup.py`)
 
 ---
 

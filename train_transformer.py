@@ -198,7 +198,6 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
         print(f"🥇 Best model: {os.path.basename(best_model_path)}")
 
 def main():
-    setup_taming(kaggle_flag=config.KAGGLE_FLAG)
     fix_torch_import_issue(kaggle_flag=config.KAGGLE_FLAG)                                               
     fix_inject_top_k_p_filtering() 
     [configpath, checkpointpath] = download_taming_vqgan(version=16, kaggle_flag=config.KAGGLE_FLAG)     
