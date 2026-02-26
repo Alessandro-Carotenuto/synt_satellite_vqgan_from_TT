@@ -3,11 +3,17 @@ import os
 import urllib.request
 import yaml
 from datetime import datetime
-from taming.models.vqgan import VQModel
-from taming.models.cond_transformer import Net2NetTransformer
+import sys
 import torch
 from omegaconf import OmegaConf
 
+# Ensure taming-transformers is importable (needed on Kaggle with editable installs)
+_taming_path = '/kaggle/working/taming-transformers' if "KAGGLE_KERNEL_RUN_TYPE" in os.environ else 'taming-transformers'
+if _taming_path not in sys.path:
+    sys.path.insert(0, _taming_path)
+
+from taming.models.vqgan import VQModel
+from taming.models.cond_transformer import Net2NetTransformer
 
 # GET AVAILABLE DEVICE
 def getDevice():
