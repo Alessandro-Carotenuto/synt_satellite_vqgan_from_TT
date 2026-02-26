@@ -78,5 +78,6 @@ def fix_inject_top_k_p_filtering():
     print("FIX: Real top_k_top_p_filtering function added to transformers!") 
     
 
-
+fix_torch_import_issue(kaggle_flag="KAGGLE_KERNEL_RUN_TYPE" in os.environ)
+fix_inject_top_k_p_filtering()
 

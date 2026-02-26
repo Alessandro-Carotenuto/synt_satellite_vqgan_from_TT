@@ -7,9 +7,6 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 import torch.optim as optim 
 import config 
 from CVUSA_Manager import CVUSADataset
-
-fix_torch_import_issue(kaggle_flag="KAGGLE_KERNEL_RUN_TYPE" in os.environ)
-fix_inject_top_k_p_filtering()
 from taming_interface import download_taming_vqgan, save_checkpoint,manual_forward_pass, getDevice, build_model
 
 
