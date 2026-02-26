@@ -116,11 +116,13 @@ Checkpoints are saved automatically in the working directory:
 
 ## Inference
 
+### Single image
+
 ```python
 from taming_interface import load_saved_model
 from inference import single_image_inference
 
-model, _, device = load_saved_model("path/to/checkpoint.pth")
+model, _, device = load_saved_model("path/to/checkpoint.pth")               #MODIFY THE PATH
 
 single_image_inference(
     model,
@@ -132,6 +134,16 @@ single_image_inference(
     save_image=True
 )
 ```
+
+### Quick test on val set
+Runs inference on the first 5 images of the validation set:
+```python
+from inference import test_inference
+
+test_inference(model, data_root=config.DATA_ROOT, device=device)
+```
+
+
 
 ---
 

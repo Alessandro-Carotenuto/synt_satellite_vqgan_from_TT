@@ -7,13 +7,15 @@ from fixermodule import top_k_top_p_filtering
 from CVUSA_Manager import get_standard_transform
 
 
+
+
 # Convert tensors back to PIL images for display
 def tensor_to_displayable(tensor):
         # Convert tensor to displayable format [0,1]
         img = ((tensor.squeeze(0) + 1) / 2).cpu()
         return img.permute(1, 2, 0).clamp(0, 1)
 
-
+# Inference for one image
 def single_image_inference(model, ground_image_path, device='cpu', temperature=1.0, top_k=600, top_p=0.92, save_image=False, nameadd=""):
 
     
@@ -109,3 +111,30 @@ def single_image_inference(model, ground_image_path, device='cpu', temperature=1
         print(f"✅ Generated image saved as '{unique_filename}'")
     
     return generated_satellite_pil, ground_pil
+
+# Testing the inference
+def test_inference(model, data_root, device='cpu'):
+    """Run inference on the first 5 images of the val set"""
+    
+    csv_path = os.path.join(data_root, "val-19zl_fixed.csv")
+    
+    with open(csv_path, 'r', newline='', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        next(reader)  # skip header
+        rows = list(reader)[:5]
+    
+    for idx, row in enumerate(rows):
+        ground_path = os.path.join(data_root, row[1])
+        print(f"\n--- Image {idx + 1}: {os.path.basename(ground_path)} ---")
+        single_image_inference(model, ground_path, device=device)
+    """Run inference on the first 5 images of the val set"""
+    
+    with open(csv_path, 'r', newline='', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        next(reader)  # skip header
+        rows = list(reader)[:5]
+    
+    for idx, row in enumerate(rows):
+        ground_path = os.path.join(data_root, row[1])
+        print(f"\n--- Image {idx + 1}: {os.path.basename(ground_path)} ---")
+        single_image_inference(model, ground_path, device=device)
