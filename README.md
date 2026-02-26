@@ -116,17 +116,22 @@ Checkpoints are saved automatically in the working directory:
 
 ## Inference
 
+
+### Load a saved model
+```python
+from taming_interface import load_saved_model
+
+model, _, device = load_saved_model("path/to/checkpoint.pth")               #MODIFY THE PATH
+```
+
 ### Single image
 
 ```python
-from taming_interface import load_saved_model
 from inference import single_image_inference
-
-model, _, device = load_saved_model("path/to/checkpoint.pth")               #MODIFY THE PATH
 
 single_image_inference(
     model,
-    "path/to/street_photo.jpg",
+    "path/to/street_photo.jpg",                                             #MODIFY THE PATH
     device=device,
     temperature=1.0,   # lower = more deterministic, higher = more varied
     top_k=600,
