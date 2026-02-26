@@ -29,7 +29,7 @@ At inference time, a street photo is encoded into 256 tokens, the transformer au
 ├── taming_interface.py     # Model building, checkpointing, VQGAN interface
 ├── CVUSA_Manager.py        # Dataset loading
 ├── fixermodule.py          # Compatibility fixes for taming-transformers
-├── setup.py                # Environment setup script
+├── setup.py                # Environment setup script (local alternative)
 ├── requirements.txt        # Dependencies
 └── CVUSA_subset/           # Dataset directory (local only, see below)
 ```
@@ -63,12 +63,22 @@ Import the dataset in your Kaggle notebook. It will be available automatically a
 
 ## Setup
 
-**1. Install dependencies and clone taming-transformers:**
+Dependencies, taming-transformers, and the VQGAN weights are all downloaded automatically on first run — no manual setup required.
+
+**Local** — optionally edit `config.py` first, then:
 ```bash
-python setup.py
+python train_transformer.py
 ```
 
-**2. Configure** `config.py` (local only, Kaggle is automatic, see below).
+**Kaggle** — everything is detected and configured automatically. Optionally override parameters before running:
+```python
+import config
+config.NUM_EPOCHS = 100   # only needed if you want to change the defaults
+config.BATCH_SIZE = 16
+
+import train_transformer
+train_transformer.main()
+```
 
 ---
 
@@ -81,7 +91,7 @@ KAGGLE_FLAG = "KAGGLE_KERNEL_RUN_TYPE" in os.environ  # automatic, don't touch
 
 DATA_ROOT = "CVUSA_subset"   # path to dataset (local only)
 
-NUM_EPOCHS    = 50
+NUM_EPOCHS    = 75
 LEARNING_RATE = 5e-4
 BATCH_SIZE    = 8
 ```
@@ -89,24 +99,6 @@ BATCH_SIZE    = 8
 ---
 
 ## Training
-
-**Local:**
-```bash
-python train_transformer.py
-```
-
-**Kaggle**,  add a cell at the top of your notebook before any imports to override parameters if needed:
-```python
-import config
-config.NUM_EPOCHS = 50 
-config.BATCH_SIZE = 8
-config.LEARNING_RATE = 5e-4
-```
-Then run:
-```python
-import train_transformer
-train_transformer.main()
-```
 
 Checkpoints are saved automatically in the working directory:
 - **Best model** — saved every time test loss improves, previous one deleted
@@ -116,22 +108,20 @@ Checkpoints are saved automatically in the working directory:
 
 ## Inference
 
-
 ### Load a saved model
 ```python
 from taming_interface import load_saved_model
 
-model, _, device = load_saved_model("path/to/checkpoint.pth")               #MODIFY THE PATH
+model, _, device = load_saved_model("checkpoints/my_checkpoint.pth")
 ```
 
 ### Single image
-
 ```python
 from inference import single_image_inference
 
 single_image_inference(
     model,
-    "path/to/street_photo.jpg",                                             #MODIFY THE PATH
+    "CVUSA_subset/streetview/0000001.jpg",
     device=device,
     temperature=1.0,   # lower = more deterministic, higher = more varied
     top_k=600,
@@ -144,12 +134,10 @@ single_image_inference(
 Runs inference on the first 5 images of the validation set:
 ```python
 from inference import test_inference
-import config 
+import config
 
 test_inference(model, data_root=config.DATA_ROOT, device=device)
 ```
-
-
 
 ---
 
@@ -157,7 +145,7 @@ test_inference(model, data_root=config.DATA_ROOT, device=device)
 
 - Python 3.8+
 - CUDA-capable GPU recommended
-- [taming-transformers](https://github.com/CompVis/taming-transformers) (installed automatically by `setup.py`)
+- [taming-transformers](https://github.com/CompVis/taming-transformers) (installed automatically on first run)
 
 ---
 
