@@ -1,13 +1,17 @@
 import torch
 import os
 from fixermodule import fix_torch_import_issue, fix_inject_top_k_p_filtering
-from taming_interface import download_taming_vqgan, save_checkpoint,manual_forward_pass, getDevice, build_model
 import torch.nn.functional as F 
 from torch.cuda.amp import autocast, GradScaler
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import torch.optim as optim 
 import config 
 from CVUSA_Manager import CVUSADataset
+
+fix_torch_import_issue(kaggle_flag="KAGGLE_KERNEL_RUN_TYPE" in os.environ)
+fix_inject_top_k_p_filtering()
+from taming_interface import download_taming_vqgan, save_checkpoint,manual_forward_pass, getDevice, build_model
+
 
 def train_one_epoch(model, train_dataloader, optimizer, scaler, device):
     """Train for one epoch and return average loss"""
@@ -198,8 +202,6 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
         print(f"🥇 Best model: {os.path.basename(best_model_path)}")
 
 def main():
-    fix_torch_import_issue(kaggle_flag=config.KAGGLE_FLAG)                                               
-    fix_inject_top_k_p_filtering() 
     [configpath, checkpointpath] = download_taming_vqgan(version=16, kaggle_flag=config.KAGGLE_FLAG)     
     model, _, device = build_model(configpath, checkpointpath, getDevice())
 
