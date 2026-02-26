@@ -8,7 +8,7 @@ import torch
 from omegaconf import OmegaConf
 
 # Ensure taming-transformers is importable (needed on Kaggle with editable installs)
-_taming_path = '/kaggle/working/synt_satellite_vqgan_from_TT/taming-transformers' if "KAGGLE_KERNEL_RUN_TYPE" in os.environ else 'taming-transformers'
+_taming_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'taming-transformers')
 if _taming_path not in sys.path:
     sys.path.insert(0, _taming_path)
 
@@ -274,10 +274,6 @@ def load_saved_model(checkpoint_path, vqgan_checkpoint_path=None, kaggle_flag=Fa
     if not os.path.exists(checkpoint_path):
         raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
     
-    # Load the checkpoint with weights_only=False to get the full checkpoint including epoch and loss information
-    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)                   
-    print(f"Checkpoint loaded — epoch {checkpoint['epoch']}, loss {checkpoint['loss']:.4f}")
-    
     # Get VQGAN — download if not provided, from the hardcoded path
     if vqgan_checkpoint_path is None:
         print("No VQGAN path provided, downloading...")
@@ -288,6 +284,10 @@ def load_saved_model(checkpoint_path, vqgan_checkpoint_path=None, kaggle_flag=Fa
     
     # Rebuild model
     model, _, device = build_model(configpath, vqgan_checkpoint_path, device)
+
+    # Load the checkpoint with weights_only=False to get the full checkpoint including epoch and loss information
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)                   
+    print(f"Checkpoint loaded — epoch {checkpoint['epoch']}, loss {checkpoint['loss']:.4f}")
 
     # Load transformer weights
     model.transformer.load_state_dict(checkpoint['transformer_state_dict'])
