@@ -81,7 +81,7 @@ KAGGLE_FLAG = "KAGGLE_KERNEL_RUN_TYPE" in os.environ  # automatic, don't touch
 
 DATA_ROOT = "CVUSA_subset"   # path to dataset (local only)
 
-NUM_EPOCHS    = 75
+NUM_EPOCHS    = 50
 LEARNING_RATE = 5e-4
 BATCH_SIZE    = 8
 ```
@@ -100,6 +100,7 @@ python train_transformer.py
 import config
 config.NUM_EPOCHS = 50 
 config.BATCH_SIZE = 8
+config.LEARNING_RATE = 5e-4
 ```
 Then run:
 ```python
