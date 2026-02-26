@@ -144,6 +144,7 @@ single_image_inference(
 Runs inference on the first 5 images of the validation set:
 ```python
 from inference import test_inference
+import config 
 
 test_inference(model, data_root=config.DATA_ROOT, device=device)
 ```
