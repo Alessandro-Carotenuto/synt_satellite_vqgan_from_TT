@@ -238,9 +238,9 @@ class CVUSAPreprocessor:
             script_dir = Path(__file__).parent
             
             # Local file paths - CVUSA_subset in same directory as script
-            data_dir = script_dir / "CVUSA_subset"
-            train_csv = data_dir / "train-19zl.csv"
-            test_csv = data_dir / "val-19zl.csv"
+            data_dir = script_dir / "cvusa-subset-csvfixed"
+            train_csv = os.path.join(data_root, "train-19zl_fixed.csv")
+            test_csv  = os.path.join(data_root, "val-19zl_fixed.csv")
             
             # Check if directory exists
             if not data_dir.exists():
@@ -364,13 +364,13 @@ class CVUSADataset(Dataset):
        
     @classmethod
     def create_dataloaders(cls, data_root, batch_size=8, polar=True,
-                        train_csv=None, test_csv=None, kaggle_flag=False):
+                        train_csv=None, test_csv=None):
         """Factory method to create train/test dataloaders"""
         
         if train_csv is None:
-            train_csv = "/kaggle/working/train-19zl_fixed.csv" if kaggle_flag else "CVUSA_subset/train-19zl_fixed.csv"
+            train_csv = os.path.join(data_root, "train-19zl_fixed.csv")
         if test_csv is None:
-            test_csv = "/kaggle/working/val-19zl_fixed.csv" if kaggle_flag else "CVUSA_subset/val-19zl_fixed.csv"
+            test_csv = os.path.join(data_root, "val-19zl_fixed.csv")
 
         train_dataset = cls(train_csv, data_root, 256, polar, is_train=True)
         test_dataset  = cls(test_csv,  data_root, 256, polar, is_train=False)

@@ -204,8 +204,7 @@ def main():
 
     train_loader, test_loader = CVUSADataset.create_dataloaders(
         data_root=config.DATA_ROOT,
-        batch_size=config.BATCH_SIZE,
-        kaggle_flag=config.KAGGLE_FLAG
+        batch_size=config.BATCH_SIZE
     )
 
     train_model_with_evaluation(model, train_loader, test_loader, num_epochs=config.NUM_EPOCHS, lr=config.LEARNING_RATE)
