@@ -68,7 +68,7 @@ Import the dataset in your Kaggle notebook. It will be available automatically a
 python setup.py
 ```
 
-**2. Configure** `config.py` (local only — Kaggle is automatic, see below).
+**2. Configure** `config.py` (local only, Kaggle is automatic, see below).
 
 ---
 
@@ -95,11 +95,11 @@ BATCH_SIZE    = 8
 python train_transformer.py
 ```
 
-**Kaggle** — add a cell at the top of your notebook before any imports to override parameters if needed:
+**Kaggle**,  add a cell at the top of your notebook before any imports to override parameters if needed:
 ```python
 import config
-config.NUM_EPOCHS = 100
-config.BATCH_SIZE = 16
+config.NUM_EPOCHS = 50 
+config.BATCH_SIZE = 8
 ```
 Then run:
 ```python

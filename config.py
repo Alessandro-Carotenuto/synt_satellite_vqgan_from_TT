@@ -13,6 +13,6 @@ else:
     DATA_ROOT = "CVUSA_subset"
 
 # Training
-NUM_EPOCHS = 75
+NUM_EPOCHS = 50
 LEARNING_RATE = 5e-4
 BATCH_SIZE = 8
