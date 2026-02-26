@@ -8,6 +8,7 @@ from taming.models.cond_transformer import Net2NetTransformer
 import torch
 from omegaconf import OmegaConf
 
+
 # GET AVAILABLE DEVICE
 def getDevice():
     return 'cuda' if torch.cuda.is_available() else 'cpu'

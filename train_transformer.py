@@ -1,14 +1,13 @@
 import torch
 import os
 from fixermodule import fix_torch_import_issue, fix_inject_top_k_p_filtering
-from taming_interface import download_taming_vqgan, create_config, save_checkpoint
-from taming.models.cond_transformer import Net2NetTransformer
-from taming_interface import manual_forward_pass, getDevice
+from taming_interface import download_taming_vqgan, save_checkpoint,manual_forward_pass, getDevice, build_model
 import torch.nn.functional as F 
 from torch.cuda.amp import autocast, GradScaler
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import torch.optim as optim 
-
+import config 
+from CVUSA_Manager import CVUSADataset
 
 def train_one_epoch(model, train_dataloader, optimizer, scaler, device):
     """Train for one epoch and return average loss"""
@@ -198,13 +197,16 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
     if best_model_path:
         print(f"🥇 Best model: {os.path.basename(best_model_path)}")
 
-
 def main():
-    fix_torch_import_issue(kaggle_flag=False)                                               # Set to True if running in Kaggle environment
-    [configpath, checkpointpath] = download_taming_vqgan(version=16, kaggle_flag=False)     # Set to True if running in Kaggle environment
+    fix_torch_import_issue(kaggle_flag=config.KAGGLE_FLAG)                                               
+    fix_inject_top_k_p_filtering() 
+    [configpath, checkpointpath] = download_taming_vqgan(version=16, kaggle_flag=config.KAGGLE_FLAG)     
     model, _, device = build_model(configpath, checkpointpath, getDevice())
 
-    #Move model to GPU if GPU is available
-    model = model.to(device)
-    print("Model moved to",device)
+    train_loader, test_loader = CVUSADataset.create_dataloaders(
+        data_root=config.DATA_ROOT,
+        batch_size=config.BATCH_SIZE,
+        kaggle_flag=config.KAGGLE_FLAG
+    )
 
+    train_model_with_evaluation(model, train_loader, test_loader, num_epochs=config.NUM_EPOCHS, lr=config.LEARNING_RATE)

@@ -1,5 +1,4 @@
-import yaml
 import os
 
-#current path is obtainable via 
-print("Test")
+KAGGLE_FLAG = "KAGGLE_KERNEL_RUN_TYPE" in os.environ
+print(KAGGLE_FLAG)
