@@ -2,6 +2,8 @@
 
 Generate satellite images from ground-level street photos using a VQGAN + Transformer architecture, trained on the CVUSA dataset.
 
+This project is built on top of [Taming Transformers](https://github.com/CompVis/taming-transformers) by Esser et al. The VQGAN and the Net2Net Transformer architecture are taken directly from that repository.
+
 ---
 
 ## How it works
@@ -25,12 +27,37 @@ At inference time, a street photo is encoded into 256 tokens, the transformer au
 ├── train_transformer.py    # Training entry point
 ├── inference.py            # Inference functions
 ├── taming_interface.py     # Model building, checkpointing, VQGAN interface
-├── CVUSA_Manager.py        # Dataset loading and preprocessing
+├── CVUSA_Manager.py        # Dataset loading
 ├── fixermodule.py          # Compatibility fixes for taming-transformers
 ├── setup.py                # Environment setup script
 ├── requirements.txt        # Dependencies
-└── CVUSA_subset/           # Dataset directory (see Dataset section)
+└── CVUSA_subset/           # Dataset directory (local only, see below)
 ```
+
+---
+
+## Dataset
+
+Use the pre-processed dataset available on Kaggle, with CSV files already fixed:
+
+**[CVUSA Subset — CSV Fixed](https://www.kaggle.com/datasets/carotenutoalessandro/cvusa-subset-csvfixed)**
+
+### Local setup
+
+Download the dataset and place it in a `CVUSA_subset/` folder in the project root:
+
+```
+CVUSA_subset/
+├── train-19zl_fixed.csv
+├── val-19zl_fixed.csv
+├── streetview/
+├── bingmap/
+└── polarmap/
+```
+
+### Kaggle setup
+
+Import the dataset in your Kaggle notebook. It will be available automatically at `/kaggle/input/cvusa-subset-csvfixed` — no further steps needed.
 
 ---
 
@@ -41,21 +68,7 @@ At inference time, a street photo is encoded into 256 tokens, the transformer au
 python setup.py
 ```
 
-**2. Download the CVUSA dataset** and place it in the `CVUSA_subset/` folder with this structure:
-```
-CVUSA_subset/
-├── train-19zl.csv
-├── val-19zl.csv
-├── streetview/
-├── bingmap/
-└── polarmap/
-```
-
-**3. Preprocess the CSV files:**
-```python
-from CVUSA_Manager import CVUSAPreprocessor
-CVUSAPreprocessor.cvusa_split_complete()
-```
+**2. Configure** `config.py` (local only — Kaggle is automatic, see below).
 
 ---
 
@@ -66,7 +79,7 @@ All user settings are in `config.py`:
 ```python
 KAGGLE_FLAG = "KAGGLE_KERNEL_RUN_TYPE" in os.environ  # automatic, don't touch
 
-DATA_ROOT = "CVUSA_subset"   # path to dataset
+DATA_ROOT = "CVUSA_subset"   # path to dataset (local only)
 
 NUM_EPOCHS    = 75
 LEARNING_RATE = 5e-4
@@ -77,8 +90,21 @@ BATCH_SIZE    = 8
 
 ## Training
 
+**Local:**
 ```bash
 python train_transformer.py
+```
+
+**Kaggle** — add a cell at the top of your notebook before any imports to override parameters if needed:
+```python
+import config
+config.NUM_EPOCHS = 100
+config.BATCH_SIZE = 16
+```
+Then run:
+```python
+import train_transformer
+train_transformer.main()
 ```
 
 Checkpoints are saved automatically in the working directory:
@@ -99,31 +125,11 @@ single_image_inference(
     model,
     "path/to/street_photo.jpg",
     device=device,
-    temperature=1.0,
+    temperature=1.0,   # lower = more deterministic, higher = more varied
     top_k=600,
     top_p=0.92,
     save_image=True
 )
-```
-
-`temperature` controls randomness: lower = more deterministic, higher = more varied.
-
----
-
-## Running on Kaggle
-
-The project detects Kaggle automatically — no configuration needed. To override training parameters, add a cell at the top of your notebook **before any imports**:
-
-```python
-import config
-config.NUM_EPOCHS = 100
-config.BATCH_SIZE = 16
-```
-
-Then run:
-```python
-import train_transformer
-train_transformer.main()
 ```
 
 ---
@@ -133,3 +139,10 @@ train_transformer.main()
 - Python 3.8+
 - CUDA-capable GPU recommended
 - [taming-transformers](https://github.com/CompVis/taming-transformers) (installed automatically by `setup.py`)
+
+---
+
+## Credits
+
+- [Taming Transformers for High-Resolution Image Synthesis](https://github.com/CompVis/taming-transformers) — Esser et al., 2021
+- [CVUSA Dataset](https://mvrl.cse.wustl.edu/datasets/cvusa/) — Zhai et al., 2017
