@@ -70,6 +70,8 @@ python setup.py
 
 **Kaggle:**
 ```python
+!git clone https://github.com/Alessandro-Carotenuto/ground2satellite.git
+%cd ground2satellite
 !python setup.py
 ```
 
@@ -84,7 +86,10 @@ All user settings are in `config.py`:
 ```python
 KAGGLE_FLAG = "KAGGLE_KERNEL_RUN_TYPE" in os.environ  # automatic, don't touch
 
-DATA_ROOT = "CVUSA_subset"   # path to dataset (local only)
+if KAGGLE_FLAG:
+    DATA_ROOT = "/kaggle/input/cvusa-subset-csvfixed"
+else:
+    DATA_ROOT = "CVUSA_subset"
 
 NUM_EPOCHS    = 75
 LEARNING_RATE = 5e-4
