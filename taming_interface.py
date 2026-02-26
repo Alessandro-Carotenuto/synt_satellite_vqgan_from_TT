@@ -8,7 +8,7 @@ import torch
 from omegaconf import OmegaConf
 
 # Ensure taming-transformers is importable (needed on Kaggle with editable installs)
-_taming_path = '/kaggle/working/taming-transformers' if "KAGGLE_KERNEL_RUN_TYPE" in os.environ else 'taming-transformers'
+_taming_path = '/kaggle/working/synt_satellite_vqgan_from_TT/taming-transformers' if "KAGGLE_KERNEL_RUN_TYPE" in os.environ else 'taming-transformers'
 if _taming_path not in sys.path:
     sys.path.insert(0, _taming_path)
 
