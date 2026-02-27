@@ -7,7 +7,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 import torch.optim as optim 
 import config 
 from CVUSA_Manager import CVUSADataset
-from taming_interface import download_taming_vqgan, save_checkpoint,manual_forward_pass, getDevice, build_model
+from taming_interface import download_taming_vqgan, save_checkpoint,manual_forward_pass, getDevice, build_model, get_optimizer
 
 
 def train_one_epoch(model, train_dataloader, optimizer, scaler, device):
@@ -42,7 +42,7 @@ def train_one_epoch(model, train_dataloader, optimizer, scaler, device):
         
         # Print progress every 50 batches
         if batch_idx % 50 == 0:
-            print(f"  Batch {batch_idx}, Loss: {loss.item():.4f}")
+            print(f"  Batch {batch_idx}, kLoss: {loss.item():.4f}")
     
     return epoch_loss / num_batches
 
@@ -102,9 +102,9 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
     model = torch.compile(model)  # Can give 10-20% speedup
     
     # Optimizer with weight decay for regularization
-    optimizer = optim.AdamW(model.transformer.parameters(), lr=lr, betas=(0.9, 0.95), weight_decay=0.1) #weight decay 0.01 was not enough
+    optimizer = get_optimizer(model, lr, weight_decay=0.1) #weight decay 0.01 was not enough
     scaler = GradScaler()                                                                               #create the scaler
-    scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6)                                #Cosine Annealing for LR Scheduling
+    scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6)                            #Cosine Annealing for LR Scheduling
     
     print(f"Starting training for {num_epochs} epochs...")
     print(f"Training set: {len(train_dataloader)} batches")

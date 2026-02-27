@@ -1,6 +1,7 @@
 from glob import glob
 import os                                   
 import urllib.request
+from torch import optim
 import yaml
 from datetime import datetime
 import sys
@@ -138,6 +139,28 @@ def create_config(configpath):
     print(f"Using device: {device}")
 
     return complete_system_configuration, device
+
+# ADAMW with selective weight decay (no decay on biases, layernorm and embeddings)
+def get_optimizer(model, lr, weight_decay=0.0):
+    decay, no_decay = set(), set()
+    for mn, m in model.transformer.named_modules():
+        for pn, p in m.named_parameters():
+            fpn = f'{mn}.{pn}' if mn else pn
+            if pn.endswith('bias'):
+                no_decay.add(fpn)
+            elif pn.endswith('weight') and isinstance(m, torch.nn.Linear):
+                decay.add(fpn)
+            elif pn.endswith('weight') and isinstance(m, (torch.nn.LayerNorm, torch.nn.Embedding)):
+                no_decay.add(fpn)
+
+    no_decay.add('pos_emb')
+
+    param_dict = {pn: p for pn, p in model.transformer.named_parameters()}
+    optim_groups = [
+        {"params": [param_dict[pn] for pn in sorted(decay)], "weight_decay": weight_decay},
+        {"params": [param_dict[pn] for pn in sorted(no_decay)], "weight_decay": 0.0},
+    ]
+    return optim.AdamW(optim_groups, lr=lr, betas=(0.9, 0.95))
 
 # VQ-GAN DOWNLOADING, LOADING AND CHECKPOINTING FUNCTIONS
 def download_taming_vqgan(version=16, kaggle_flag=False):  

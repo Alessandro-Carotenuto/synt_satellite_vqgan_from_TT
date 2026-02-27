@@ -54,7 +54,7 @@ def single_image_inference(model, ground_image_path, device='cpu', temperature=1
             # temperature < 1.0 → differences amplified → most probable token dominates → more deterministic output
             # temperature = 1.0 → distribution unchanged
             # temperature > 1.0 → differences reduced → flatter distribution → more random/varied output
-            next_token_logits = logits[:, -1, :] / temperature      
+            next_token_logits = logits[:, -1, :] / temperature #Takes the last of the sequence     
             # Rewritten top_k_top_p_filtering function
             filtered_logits = top_k_top_p_filtering(next_token_logits, top_k=top_k, top_p=top_p)
             # Sample instead of argmax, from the distribution of probabilities
