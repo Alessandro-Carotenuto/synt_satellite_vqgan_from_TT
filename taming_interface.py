@@ -7,6 +7,7 @@ from datetime import datetime
 import sys
 import torch
 from omegaconf import OmegaConf
+import config
 
 # Ensure taming-transformers is importable (needed on Kaggle with editable installs)
 _taming_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'taming-transformers')
@@ -127,9 +128,9 @@ def create_config(configpath):
                 "n_head": 8,          # Number of attention heads, can be adjusted based on model capacity needs
                 "n_embd": 512,        # Embedding dimension, can be adjusted based on model capacity needs
                 # --- ADDED DROPOUT FOR REGULARIZATION ---
-                "embd_pdrop": 0.2,    # Dropout on embeddings
-                "resid_pdrop": 0.2,   # Dropout on residual connections
-                "attn_pdrop": 0.2     # Dropout on attention weights
+                "embd_pdrop": config.DROPOUT,    # Dropout on embeddings
+                "resid_pdrop": config.DROPOUT,   # Dropout on residual connections
+                "attn_pdrop": config.DROPOUT     # Dropout on attention weights
             }
         }
     })
@@ -220,9 +221,7 @@ def freeze_vqgan(model):
         param.requires_grad = False # requires_grad=false means that we do not want to compute gradients for these parameters during backpropagation
 
 # MANUAL FORWARD PASS FUNCTION
-def manual_forward_pass(model, satellite_imgs, ground_imgs):
-    
-
+def manual_forward_pass(model, satellite_imgs, ground_imgs, tmasking_pkeep=1.0):
     # THIS IS A REWRITE OF THE FORWARD PASS LOGIC FROM THE TRAINING LOOP, 
     # IT IS REWRITTEN TO FIX AN ISSUE WITH THE SHAPES OF THE ENCODED INDICES,
     # AND TO SHOW HOW TO MANUALLY PERFORM THE FORWARD PASS THROUGH THE MODEL.
@@ -241,6 +240,13 @@ def manual_forward_pass(model, satellite_imgs, ground_imgs):
     z_indices = z_indices_raw.view(batch_size, -1)          # RESHAPE (BATCH_SIZE, NUM_TOKENS), -1 INFER THE SECOND DIMENSION BASED ON THE NUMBER OF ELEM
     c_indices = c_indices_raw.view(batch_size, -1)
     
+    # Token masking
+    if model.training and tmasking_pkeep < 1.0:
+        mask = torch.bernoulli(tmasking_pkeep * torch.ones(z_indices.shape, device=z_indices.device))
+        mask = mask.round().to(dtype=torch.int64)
+        r_indices = torch.randint_like(z_indices, model.transformer.config.vocab_size)
+        z_indices = mask * z_indices + (1 - mask) * r_indices
+
     # Manual forward pass logic (from STEP-CHECKPOINT)
     cz_indices = torch.cat((c_indices, z_indices), dim=1)   # CONCATENATES TOKENS
     logits, _ = model.transformer(cz_indices[:, :-1])       # INTO THE TRANSFORMER; EXCEPT LAST TOKEN , WHICH WE WANT TO PREDICT
@@ -250,7 +256,6 @@ def manual_forward_pass(model, satellite_imgs, ground_imgs):
     return logits, target
 
 # SAVING, LOADING AND CHECKPOINTING FUNCTIONS FOR THE TRANSFORMER MODEL (VQ-GAN IS FROZEN, SO WE ONLY SAVE THE TRANSFORMER WEIGHTS AND OPTIMIZER STATE)
-
 def save_checkpoint(model, optimizer, epoch, loss, base_name="cvusa_ground2satellite", save_dir=None):
     """Save only the transformer weights — VQGAN is frozen and doesn't need saving"""
     

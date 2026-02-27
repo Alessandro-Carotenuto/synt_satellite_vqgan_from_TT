@@ -23,7 +23,7 @@ def train_one_epoch(model, train_dataloader, optimizer, scaler, device):
         
         # Forward pass with mixed precision
         with autocast():
-            logits, target = manual_forward_pass(model, satellite_imgs, ground_imgs)                                #ESEGUO FORWARD PASSS
+            logits, target = manual_forward_pass(model, satellite_imgs, ground_imgs, tmasking_pkeep=config.TOKEN_MASKING_PKEEP)                                #ESEGUO FORWARD PASSS
             loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), target.reshape(-1),label_smoothing=0.1)     #CALCOLO LA LOSS
         
         # Backward pass with gradient scaling
