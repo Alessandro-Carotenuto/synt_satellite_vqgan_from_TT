@@ -10,7 +10,7 @@ from CVUSA_Manager import CVUSADataset
 from taming_interface import download_taming_vqgan, save_checkpoint,manual_forward_pass, getDevice, build_model, get_optimizer
 
 
-def train_one_epoch(model, train_dataloader, optimizer, scaler, device):
+def train_one_epoch(model, train_dataloader, optimizer, scaler, device, tmask_pkeep=1.0):
     """Train for one epoch and return average loss"""
     model.train()           #Set Training mode
     epoch_loss = 0          #Starting Loss
@@ -23,7 +23,7 @@ def train_one_epoch(model, train_dataloader, optimizer, scaler, device):
         
         # Forward pass with mixed precision
         with autocast():
-            logits, target = manual_forward_pass(model, satellite_imgs, ground_imgs, tmasking_pkeep=config.TOKEN_MASKING_PKEEP)                                #ESEGUO FORWARD PASSS
+            logits, target = manual_forward_pass(model, satellite_imgs, ground_imgs, tmasking_pkeep=tmask_pkeep)    #ESEGUO FORWARD PASSS
             loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), target.reshape(-1),label_smoothing=0.1)     #CALCOLO LA LOSS
         
         # Backward pass with gradient scaling
@@ -121,10 +121,12 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
         print(f"\n{'='*60}")
         print(f"EPOCH {epoch + 1}/{num_epochs}")
         print(f"{'='*60}")
+
+        current_token_masking=1.0-(epoch/num_epochs)*(config.TOKEN_MASKING_SCHEDULING_END-config.TOKEN_MASKING_SCHEDULING_START)
         
         # TRAINING PHASE
         print("Training phase...")
-        train_loss = train_one_epoch(model, train_dataloader, optimizer, scaler, device)            #LAUNCH TRAINING FOR THIS EPOCH
+        train_loss = train_one_epoch(model, train_dataloader, optimizer, scaler, device, tmask_pkeep=current_token_masking) #LAUNCH TRAINING FOR THIS EPOCH
         
         # EVALUATION PHASE  
         print("Evaluation phase...")
