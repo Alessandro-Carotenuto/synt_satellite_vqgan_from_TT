@@ -328,6 +328,7 @@ class CVUSADataset(Dataset):
                     transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1),
                     transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 2.0))
                 ], p=0.5),
+                transforms.RandomHorizontalFlip(p=0.5),
                 # --- End of Augmentations ---
                 transforms.ToTensor(),
                 transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])

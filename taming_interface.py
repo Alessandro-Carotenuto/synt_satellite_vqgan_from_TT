@@ -295,9 +295,7 @@ def load_saved_model(checkpoint_path, vqgan_checkpoint_path=None, kaggle_flag=Fa
     Rebuild the model the same way train_transformer.py does,
     then load the saved transformer weights on top.
     """
-    
 
-    
     # Load checkpoint
     if not os.path.exists(checkpoint_path):
         raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
@@ -311,7 +309,7 @@ def load_saved_model(checkpoint_path, vqgan_checkpoint_path=None, kaggle_flag=Fa
         [configpath, _] = download_taming_vqgan(version=16, kaggle_flag=kaggle_flag)
     
     # Rebuild model
-    model, _, device = build_model(configpath, vqgan_checkpoint_path, device)
+    model, _, device = build_model(configpath, vqgan_checkpoint_path, getDevice())
 
     # Load the checkpoint with weights_only=False to get the full checkpoint including epoch and loss information
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)                   
