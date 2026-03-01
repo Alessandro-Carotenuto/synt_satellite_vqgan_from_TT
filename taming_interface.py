@@ -124,8 +124,8 @@ def create_config(configpath):
             "params": {
                 "vocab_size": 16384,  # This matches the codebook size of the VQ-GAN
                 "block_size": 512,    # Sequence length (for 16x16 = 256 tokens x2)
-                "n_layer": 12,        # Number of transformer layers, can be adjusted based on model capacity needs
-                "n_head": 8,          # Number of attention heads, can be adjusted based on model capacity needs
+                "n_layer": config.LAYERS,        # Number of transformer layers, can be adjusted based on model capacity needs
+                "n_head": config.HEADS,          # Number of attention heads, can be adjusted based on model capacity needs
                 "n_embd": 512,        # Embedding dimension, can be adjusted based on model capacity needs
                 # --- ADDED DROPOUT FOR REGULARIZATION ---
                 "embd_pdrop": config.DROPOUT,    # Dropout on embeddings
