@@ -1,5 +1,6 @@
-import torch
 import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+import torch
 from fixermodule import fix_torch_import_issue, fix_inject_top_k_p_filtering
 import torch.nn.functional as F 
 from torch.cuda.amp import autocast, GradScaler

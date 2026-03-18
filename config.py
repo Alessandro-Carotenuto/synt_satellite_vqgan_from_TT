@@ -7,10 +7,11 @@ import os
 # Automatically True if running on Kaggle, False otherwise
 KAGGLE_FLAG = "KAGGLE_KERNEL_RUN_TYPE" in os.environ
 
+
 if KAGGLE_FLAG:
     DATA_ROOT = "/kaggle/input/datasets/carotenutoalessandro/cvusa-subset-csvfixed"
 else:
-    DATA_ROOT = "CVUSA_subset_csvfixed"
+    DATA_ROOT = "C:/Users/alex1/Documents/DATASETS/CVUSA_subset_35191_raw"
 
 # Training
 NUM_EPOCHS = 30

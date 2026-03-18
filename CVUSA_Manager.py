@@ -1,11 +1,14 @@
 import csv
 import os
-from pathlib import Path
+from pathlib import Path    
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
-import torch
+import torchvision.transforms.functional as TF
 import torchvision.transforms as transforms
 import config
+import numpy as np
+import random
+
 
 def get_standard_transform(size=256):
     """Standard image transform: resize, normalize to [-1, 1]"""
@@ -281,104 +284,168 @@ class CVUSAPreprocessor:
             print(f"   Data rows: {len(train_data)}")
             print(f"   Sample: {train_data[0] if train_data else 'No data'}")
 
+
+        
+        @staticmethod
+        def polarize(image, output_size=None):
+            """
+            Converts a top-down aerial image into a polar projection.
+            Think of it as unrolling the aerial image from the center outward:
+            the center becomes the top row, the edges become the bottom row.
+            """
+            from scipy.ndimage import map_coordinates
+
+            img = np.array(image.convert('RGB')).astype(np.float32)
+            Ds  = img.shape[0]  # input is square
+
+            Hv, Wv = output_size if output_size else (Ds, Ds)
+
+            # For each pixel in the output, figure out where to sample in the input.
+            # Rows control radius (how far from center), columns control angle (0 to 2pi).
+            row, col = np.meshgrid(np.arange(Hv), np.arange(Wv), indexing='ij')
+
+            radius = (Ds / 2.0) * (Hv - row) / Hv
+            angle  = (2.0 * np.pi / Wv) * col
+
+            src_row = Ds / 2.0 - radius * np.cos(angle)
+            src_col = Ds / 2.0 + radius * np.sin(angle)
+
+            channels = [
+                map_coordinates(img[:, :, c], [src_row, src_col], order=1, mode='nearest')
+                for c in range(3)
+            ]
+
+            return Image.fromarray(np.stack(channels, axis=-1).clip(0, 255).astype(np.uint8))
+
+
+        @staticmethod
+        def apply_polar_to_dataset(csv_path, data_root, output_size=None, num_workers=4):
+            """
+            One-time preprocessing: reads aerial images from a CSV,
+            applies the polar transform, and saves results to polarmap/normal/.
+            Already processed images are skipped automatically.
+            """
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+
+            # Read all unique aerial paths from column 1
+            with open(csv_path, 'r', newline='', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                next(reader)
+                aerial_paths = list(dict.fromkeys(row[0] for row in reader if row))
+
+            print(f"Found {len(aerial_paths)} aerial images to process")
+
+            def process_one(rel_path):
+                src = os.path.join(data_root, rel_path)
+                dst = os.path.join(data_root, "polarmap", "normal", Path(rel_path).name)
+
+                if os.path.exists(dst):
+                    return 'skipped'
+
+                try:
+                    os.makedirs(os.path.dirname(dst), exist_ok=True)
+                    CVUSAPreprocessor.polarize(Image.open(src), output_size).save(dst)
+                    return 'ok'
+                except Exception as e:
+                    print(f"  Failed on {src}: {e}")
+                    return 'failed'
+
+            counts = {'ok': 0, 'skipped': 0, 'failed': 0}
+            total  = len(aerial_paths)
+
+            with ThreadPoolExecutor(max_workers=num_workers) as pool:
+                futures = {pool.submit(process_one, p): p for p in aerial_paths}
+
+                for i, future in enumerate(as_completed(futures), start=1):
+                    counts[future.result()] += 1
+
+                    if i % 500 == 0 or i == total:
+                        print(f"  {i}/{total} - saved {counts['ok']}, "
+                            f"skipped {counts['skipped']}, failed {counts['failed']}")
+
+            print(f"Done. {counts['ok']} generated, "
+                f"{counts['skipped']} already existed, {counts['failed']} errors.")
 # --------------------------------------------------------------------------------------------------
 
 class CVUSADataset(Dataset):
-    def __init__(self, csv_path, data_root, size=256, polar=True, is_train=True):
+    def __init__(self, csv_path, data_root, size=256, is_train=True):
         self.data_root = data_root
         self.size = size
-        self.polar = polar
-        
-        # Load file pairs from CSV
+        self.is_train = is_train
         self.file_pairs = []
-        
+
         print(f"📂 Loading dataset from: {csv_path}")
-        
+
+        if not os.path.exists(csv_path):
+            raise FileNotFoundError(f"CSV not found at {csv_path}")
+
         with open(csv_path, 'r', newline='', encoding='utf-8') as file:
+            # We use a standard reader to handle various header names
             reader = csv.reader(file)
-            headers = next(reader)
+            header = next(reader)
+            
+            # Map columns based on your new dataset structure
+            # Adjust these indices if your CSV columns are in a different order
+            # Usually: Col 0 = Satellite/Polar, Col 1 = Ground
             for row in reader:
-                if len(row) < 3: continue
+                if len(row) < 2: continue
                 
-                bingmap_path, ground_path, polarmap_path = row[0], row[1], row[2]
-                satellite_relative_path = polarmap_path if self.polar else bingmap_path
+                # Standardizing paths for Windows/Linux compatibility
+                polar_rel = row[0].replace('\\', os.sep).strip()
+                ground_rel = row[1].replace('\\', os.sep).strip()
                 
-                satellite_full_path = os.path.join(data_root, satellite_relative_path)
-                ground_full_path = os.path.join(data_root, ground_path)
-                
-                if os.path.exists(satellite_full_path) and os.path.exists(ground_full_path):
-                    self.file_pairs.append((satellite_full_path, ground_full_path))
+                polar_path = os.path.join(data_root, polar_rel)
+                ground_path = os.path.join(data_root, ground_rel)
+
+                if os.path.exists(polar_path) and os.path.exists(ground_path):
+                    self.file_pairs.append((polar_path, ground_path))
 
         print(f"✅ Found {len(self.file_pairs)} valid image pairs.")
-        
-        # --- MODIFIED: Create separate transform pipelines ---
-        
-        # Pipeline for TARGET images (Satellite). ALWAYS without augmentation.
-        self.satellite_transform = get_standard_transform(size)
 
-        # Pipeline for INPUT images (Ground). Augmentation is applied ONLY if is_train=True.
-        if is_train:
-            self.ground_transform = transforms.Compose([
-                transforms.Resize((size, size)),
-                transforms.RandomApply([
-                    transforms.RandomAffine(degrees=5, translate=(0.05, 0.05)),
-                    transforms.RandomPerspective(distortion_scale=0.3, p=0.5)
-                ], p=0.5),
-                transforms.RandomApply([
-                    transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1),
-                    transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 2.0))
-                ], p=0.5),
-                transforms.RandomHorizontalFlip(p=0.5),
-                # --- End of Augmentations ---
-                transforms.ToTensor(),
-                transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
-            ])
-            print(f"   -> Mode: TRAINING (applying augmentations to ground images)")
-        else:
-            # For the validation set, the ground transform is the same as the satellite one (no augmentations).
-            self.ground_transform = self.satellite_transform
-            print(f"   -> Mode: VALIDATION (no augmentations)")
+        self.base_transform = get_standard_transform(size)
 
     def __len__(self):
         return len(self.file_pairs)
 
     def __getitem__(self, idx):
-        satellite_path, ground_path = self.file_pairs[idx]
+        polar_path, ground_path = self.file_pairs[idx]
         
-        try:
-            # Load images
-            satellite_img = Image.open(satellite_path).convert('RGB')
-            ground_img = Image.open(ground_path).convert('RGB')
-            
-            # --- MODIFIED: Apply the correct transform to each image ---
-            satellite_tensor = self.satellite_transform(satellite_img)
-            ground_tensor = self.ground_transform(ground_img)
-            
-            return {
-                "satellite": satellite_tensor,  # The clean, non-augmented target
-                "ground": ground_tensor         # The potentially augmented input
-            }
-        
-        except Exception as e:
-            print(f"❌ Error loading images at index {idx}: {e}")
-            dummy_tensor = torch.zeros(3, self.size, self.size)
-            return {"satellite": dummy_tensor, "ground": dummy_tensor}
+        # Load images
+        polar_img = Image.open(polar_path).convert('RGB')
+        ground_img = Image.open(ground_path).convert('RGB')
 
-       
+        # Synchronized Augmentation for Training
+        if self.is_train:
+            # Horizontal Flip (Geometric consistency: flip both)
+            if random.random() > 0.5:
+                polar_img = TF.hflip(polar_img)
+                ground_img = TF.hflip(ground_img)
+
+            # Color jitter only on ground to make model robust
+            if random.random() > 0.2:
+                ground_img = transforms.ColorJitter(0.1, 0.1, 0.1)(ground_img)
+
+        # Apply final transforms
+        polar_tensor = self.base_transform(polar_img)
+        ground_tensor = self.base_transform(ground_img)
+
+        # In your transformer logic: 
+        # 'satellite' = target (Polar)
+        # 'ground' = condition (Streetview)
+        return {"satellite": polar_tensor, "ground": ground_tensor}
+
     @classmethod
-    def create_dataloaders(cls, data_root, batch_size=8, polar=True,
-                        train_csv=None, test_csv=None):
-        """Factory method to create train/test dataloaders"""
-        
-        if train_csv is None:
-            train_csv = os.path.join(data_root, "train-19zl_fixed.csv")
-        if test_csv is None:
-            test_csv = os.path.join(data_root, "val-19zl_fixed.csv")
+    def create_dataloaders(cls, data_root, batch_size=8, train_csv=None, test_csv=None):
+        # Default filenames if not provided
+        train_csv = train_csv or os.path.join(data_root, "train.csv")
+        test_csv = test_csv or os.path.join(data_root, "val.csv")
 
-        train_dataset = cls(train_csv, data_root, 256, polar, is_train=True)
-        test_dataset  = cls(test_csv,  data_root, 256, polar, is_train=False)
+        train_dataset = cls(train_csv, data_root, size=256, is_train=True)
+        test_dataset  = cls(test_csv,  data_root, size=256, is_train=False)
 
-        train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
-        test_loader  = DataLoader(test_dataset,  batch_size, shuffle=False)
+        # Set num_workers=0 if you want to avoid the Windows "spawn" prints entirely
+        # but 4 is usually fine with the fix I provided above.
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+        test_loader  = DataLoader(test_dataset,  batch_size=batch_size, shuffle=False, num_workers=4)
 
         return train_loader, test_loader

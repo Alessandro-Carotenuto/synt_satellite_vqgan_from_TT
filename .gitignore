@@ -4,3 +4,4 @@ taming/
 .vscode/
 __pycache__/
 CVUSA_subset_csvfixed/
+test.py
