@@ -24,7 +24,7 @@ def single_image_inference(model, ground_image_path, real_polar_path=None, devic
     ground_tensor = transform(ground_pil).unsqueeze(0).to(device)
     
     # Se passiamo il percorso della polare reale, carichiamola per il confronto
-    real_polar_display = None
+    real_polar_display = True
     if real_polar_path:
         real_polar_pil = Image.open(real_polar_path).convert('RGB')
         # Applichiamo lo stesso transform per coerenza visiva (resize e normalizzazione)
