@@ -6,7 +6,7 @@ import os
 from fixermodule import top_k_top_p_filtering
 from CVUSA_Manager import get_standard_transform
 import csv
-
+import config
 
 
 
@@ -117,7 +117,10 @@ def single_image_inference(model, ground_image_path, device='cpu', temperature=1
 def test_inference(model, data_root, device='cpu'):
     """Run inference on the first 5 images of the val set"""
     
-    csv_path = os.path.join(data_root, "val-19zl_fixed.csv")
+    if config.OLD_SUBSET:
+        csv_path = os.path.join(data_root, "val-19zl_fixed.csv")
+    else:
+        csv_path = os.path.join(data_root, "val.csv")
     
     with open(csv_path, 'r', newline='', encoding='utf-8') as f:
         reader = csv.reader(f)

@@ -6,10 +6,10 @@ import os
 
 # Automatically True if running on Kaggle, False otherwise
 KAGGLE_FLAG = "KAGGLE_KERNEL_RUN_TYPE" in os.environ
-
+OLD_SUBSET=False
 
 if KAGGLE_FLAG:
-    DATA_ROOT = "/kaggle/input/datasets/carotenutoalessandro/cvusa-subset-csvfixed"
+    DATA_ROOT = "/kaggle/input/datasets/carotenutoalessandro/cvusa-groundandpolar-subset-35191"
 else:
     DATA_ROOT = "C:/Users/alex1/Documents/DATASETS/CVUSA_subset_35191_raw"
 
