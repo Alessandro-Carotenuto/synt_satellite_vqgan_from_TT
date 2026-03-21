@@ -136,7 +136,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
         print(f"EPOCH {epoch + 1}/{num_epochs}")
         print(f"{'='*60}")
 
-        current_token_masking=1.0-(epoch/num_epochs)*(config.TOKEN_MASKING_SCHEDULING_END-config.TOKEN_MASKING_SCHEDULING_START)
+        current_token_masking = config.TOKEN_MASKING_SCHEDULING_START + (epoch / num_epochs) * (config.TOKEN_MASKING_SCHEDULING_END - config.TOKEN_MASKING_SCHEDULING_START)
         
         # TRAINING PHASE
         print("Training phase...")
