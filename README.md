@@ -31,33 +31,34 @@ At inference time, a street photo is encoded into 256 tokens, the transformer au
 ├── fixermodule.py          # Compatibility fixes for taming-transformers
 ├── setup.py                # Environment setup script
 ├── requirements.txt        # Dependencies
-└── CVUSA_subset/           # Dataset directory (local only, see below)
+└── CVUSA_subset_35191_raw/ # Dataset directory (local only, see below)
 ```
 
 ---
 
 ## Dataset
 
-Use the pre-processed dataset available on Kaggle, with CSV files already fixed:
+This project uses a subset of the CVUSA dataset containing **35,191 image pairs** (ground-level + polar satellite).
 
-**[CVUSA Subset — CSV Fixed](https://www.kaggle.com/datasets/carotenutoalessandro/cvusa-subset-csvfixed)**
+The dataset is available on Kaggle:
+
+**[CVUSA Ground and Polar Subset — 35191](https://www.kaggle.com/datasets/carotenutoalessandro/cvusa-groundandpolar-subset-35191)**
 
 ### Local setup
 
-Download the dataset and place it in a `CVUSA_subset_csvfixed/` folder in the project root:
+Download the dataset and place it in a `CVUSA_subset_35191_raw/` folder in the project root:
 
 ```
-CVUSA_subset_csvfixed/
-├── train-19zl_fixed.csv
-├── val-19zl_fixed.csv
+CVUSA_subset_35191_raw/
+├── train.csv
+├── val.csv
 ├── streetview/
-├── bingmap/
 └── polarmap/
 ```
 
 ### Kaggle setup
 
-Import the dataset in your Kaggle notebook. It will be available automatically at `/kaggle/input/cvusa-subset-csvfixed` — no further steps needed.
+Import the dataset in your Kaggle notebook. It will be available automatically at `/kaggle/input/datasets/carotenutoalessandro/cvusa-groundandpolar-subset-35191` — no further steps needed.
 
 ---
 
@@ -87,13 +88,24 @@ All user settings are in `config.py`:
 KAGGLE_FLAG = "KAGGLE_KERNEL_RUN_TYPE" in os.environ  # automatic, don't touch
 
 if KAGGLE_FLAG:
-    DATA_ROOT = "/kaggle/input/cvusa-subset-csvfixed"
+    DATA_ROOT = "/kaggle/input/datasets/carotenutoalessandro/cvusa-groundandpolar-subset-35191"
 else:
-    DATA_ROOT = "CVUSA_subset_csvfixed"
+    DATA_ROOT = "CVUSA_subset_35191_raw"
 
-NUM_EPOCHS    = 75
+# Training
+NUM_EPOCHS    = 30
+LEARNING_RATE_MODE = LRMODE.FIXED   # FIXED, COSINEANNEALING, COSINEANNEALING_WR
 LEARNING_RATE = 5e-4
 BATCH_SIZE    = 8
+DROPOUT       = 0.25
+
+# Token masking schedule (linearly decays from START to END over training)
+TOKEN_MASKING_SCHEDULING_START = 1.0
+TOKEN_MASKING_SCHEDULING_END   = 0.7
+
+# Architecture
+HEADS  = 8
+LAYERS = 6
 ```
 
 On Kaggle, override parameters directly before running:
@@ -122,6 +134,16 @@ Checkpoints are saved automatically in the working directory:
 - **Best model** — saved every time test loss improves, previous one deleted
 - **Routine checkpoint** — saved every 5 epochs
 
+### Training features
+
+- **Mixed precision** (AMP) — automatic via `GradScaler`, speeds up training on CUDA
+- **`torch.compile()`** — enabled by default, gives ~10–20% additional speedup
+- **Gradient clipping** — max norm 1.0
+- **Label smoothing** — 0.1, applied to cross-entropy loss
+- **Selective weight decay** — applied only to linear weights; biases, LayerNorm and embeddings are excluded
+- **Token masking** — linearly scheduled from `TOKEN_MASKING_SCHEDULING_START` to `TOKEN_MASKING_SCHEDULING_END` over all epochs
+- **LR scheduling** — configurable via `LEARNING_RATE_MODE`: `FIXED`, `COSINEANNEALING`, or `COSINEANNEALING_WR`
+
 ---
 
 ## Inference
@@ -139,7 +161,7 @@ from inference import single_image_inference
 
 single_image_inference(
     model,
-    "CVUSA_subset_csvfixed/streetview/0000001.jpg",
+    "CVUSA_subset_35191_raw/streetview/0000001.jpg",
     device=device,
     temperature=1.0,   # lower = more deterministic, higher = more varied
     top_k=600,
