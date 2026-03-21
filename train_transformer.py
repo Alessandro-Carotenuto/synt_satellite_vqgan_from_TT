@@ -4,9 +4,10 @@ import torch
 from fixermodule import fix_torch_import_issue, fix_inject_top_k_p_filtering
 import torch.nn.functional as F 
 from torch.cuda.amp import autocast, GradScaler
-from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim.lr_scheduler import CosineAnnealingLR, CosineAnnealingWarmRestarts
 import torch.optim as optim 
 import config 
+from config import LRMODE
 from CVUSA_Manager import CVUSADataset
 from taming_interface import download_taming_vqgan, save_checkpoint,manual_forward_pass, getDevice, build_model, get_optimizer
 
@@ -55,7 +56,8 @@ def evaluate_model(model, test_dataloader, device):
     #ACCUMULATION
     total_loss = 0
     total_tokens = 0
-    correct_predictions = 0
+    correct_top1 = 0
+    correct_top10 = 0
     num_batches = 0
     
     with torch.no_grad():   
@@ -72,23 +74,27 @@ def evaluate_model(model, test_dataloader, device):
             
             # Calculate token accuracy
             predictions = logits.argmax(dim=-1)               #ARGMAX FOR EVERY TOKEN
-            correct = (predictions == target).sum().item()    #HOW MANY TRUE PERFECT?
+            correct_top1 += (predictions == target).sum().item()
+
+            top10_indices = torch.topk(logits, k=10, dim=-1).indices  # (B, T, 10)
+            correct_top10 += (top10_indices == target.unsqueeze(-1)).any(dim=-1).sum().item()
             
             # Accumulate metrics
             total_loss += loss.item()                          
             total_tokens += target.numel()
-            correct_predictions += correct
             num_batches += 1
     
     # Calculate averages metrics and statistics
     avg_loss = total_loss / num_batches
-    token_accuracy = correct_predictions / total_tokens
-    
+    perplexity = torch.exp(torch.tensor(avg_loss)).item()
+
     model.train()   # Switch back to training mode
     
     return {
         'loss': avg_loss,
-        'token_accuracy': token_accuracy,
+        'perplexity': perplexity,
+        'top1_accuracy': correct_top1 / total_tokens,
+        'top10_accuracy': correct_top10 / total_tokens,
         'total_tokens': total_tokens,
         'total_batches': num_batches
     }
@@ -105,7 +111,13 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
     # Optimizer with weight decay for regularization
     optimizer = get_optimizer(model, lr, weight_decay=0.1) #weight decay 0.01 was not enough
     scaler = GradScaler()                                                                               #create the scaler
-    scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6)                            #Cosine Annealing for LR Scheduling
+    match config.LEARNING_RATE_MODE:
+        case LRMODE.COSINEANNEALING:
+            scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6)                            #Cosine Annealing for LR Scheduling
+        case LRMODE.COSINEANNEALING_WR:
+            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0 = 10, T_mult=1, eta_min=1e-6)                      #Cosine Annealing for LR Scheduling
+        case LRMODE.FIXED:
+            pass
     
     print(f"Starting training for {num_epochs} epochs...")
     print(f"Training set: {len(train_dataloader)} batches")
@@ -134,10 +146,14 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
         print("Evaluation phase...")
         test_metrics = evaluate_model(model, test_dataloader, device)                               #EVALUATE FOR THIS EPOCH
         test_loss = test_metrics['loss']
-        test_accuracy = test_metrics['token_accuracy']
+        top1acc = test_metrics['top1_accuracy']
+        top10acc = test_metrics['top10_accuracy']
+        perp=test_metrics['perplexity']
+
         
         # UPDATE LEARNING RATE
-        scheduler.step()
+        if config.LEARNING_RATE_MODE != LRMODE.FIXED:
+            scheduler.step()
         current_lr = optimizer.param_groups[0]['lr']
         
         # OVERFITTING DETECTION (using absolute value)
@@ -155,7 +171,9 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
         print(f"\nEPOCH {epoch + 1} SUMMARY:")
         print(f"    Train Loss:     {train_loss:.4f}")
         print(f"    Test Loss:      {test_loss:.4f}")
-        print(f"    Test Accuracy:  {test_accuracy:.3f} ({test_accuracy*100:.1f}%)")
+        print(f"    Top1 Accuracy:  {top1acc:.3f} ({top1acc*100:.1f}%)")
+        print(f"    Top10 Accuracy:  {top10acc:.3f} ({top10acc*100:.1f}%)")
+        print(f"    Perplexity:  {perp:.2f}")
         print(f"    Learning Rate:  {current_lr:.2e}")
         print(f"    Loss Gap (abs): {current_gap:.4f}")
 
@@ -180,14 +198,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
                                     base_name="CVUSAGround2Satellite_improved")
         
         # ROUTINE SAVING + DETAILED METRICS (every 5 epochs)
-        if (epoch + 1) % 5 == 0:
-            print(f"\nEPOCH {epoch + 1} - DETAILED EVALUATION:")
-            
-            # Calculate and display perplexity
-            perplexity = torch.exp(torch.tensor(test_loss))
-            print(f"   Test Perplexity: {perplexity:.2f}")
-            print(f"      (Model is as 'confused' as choosing randomly from ~{perplexity:.0f} options)")
-            
+        if (epoch + 1) % 5 == 0:           
             # Routine save
             print("   Routine save...")
             save_checkpoint(model, optimizer, epoch+1, test_loss, 

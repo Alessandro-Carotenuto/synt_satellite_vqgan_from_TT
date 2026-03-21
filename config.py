@@ -1,4 +1,10 @@
 import os
+from enum import Enum
+
+class LRMODE(Enum):
+    FIXED=0
+    COSINEANNEALING=1
+    COSINEANNEALING_WR=2
 
 # ========================
 # USER CONFIGURATION
@@ -15,6 +21,7 @@ else:
 
 # Training
 NUM_EPOCHS = 30
+LEARNING_RATE_MODE=LRMODE.FIXED #FIXED, COSINEANNEALING, COSINEANNEALING_WR
 LEARNING_RATE = 5e-4
 BATCH_SIZE = 8
 DROPOUT=0.25 #25%
