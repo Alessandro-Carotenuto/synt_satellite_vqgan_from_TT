@@ -115,7 +115,8 @@ def test_inference(model, data_root, device='cpu'):
         rows = list(reader)[:5]
     
     for idx, row in enumerate(rows):
-        ground_path = os.path.join(data_root, row[1])
+        ground_rel = row[1].replace('\\', '/').strip()
+        ground_path = os.path.join(data_root, ground_rel)
         print(f"\n--- Image {idx + 1}: {os.path.basename(ground_path)} ---")
         single_image_inference(model, ground_path, device=device)
     """Run inference on the first 5 images of the val set"""
