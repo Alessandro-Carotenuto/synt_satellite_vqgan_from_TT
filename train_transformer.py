@@ -128,10 +128,12 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
     
     # Tracking variables
     best_test_loss = float('inf')
+    best_top10_retrieval= float('-inf')
     previous_gap = 0
     best_model_path = None  #Track the last saved best model to delete it
     
     for epoch in range(num_epochs):
+        saved=False
         print(f"\n{'='*60}")
         print(f"EPOCH {epoch + 1}/{num_epochs}")
         print(f"{'='*60}")
@@ -181,10 +183,10 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
             print(f"   {gap_status}")
         
         # BEST MODEL SAVING (when test loss improves)
-        if test_loss < best_test_loss:
+        if (test_loss < best_test_loss) and saved==False:
             # Calculate improvement
             improvement_amount = best_test_loss - test_loss
-            improvement = f"improved by {improvement_amount:.4f}" if epoch > 0 else "first save"
+            improvement = f"improved LOSS by {improvement_amount:.4f}" if epoch > 0 else "first save"
             
             # Delete previous best model if it exists
             if best_model_path and os.path.exists(best_model_path):
@@ -196,7 +198,25 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
             print(f"-- New best test loss! Saving 'improve' model... ({improvement})")
             best_model_path = save_checkpoint(model, optimizer, epoch+1, test_loss, 
                                     base_name="CVUSAGround2Satellite_improved")
+            saved=True
         
+        if (top10acc > best_top10_retrieval) and saved==False:
+            # Calculate improvement
+            improvementt10_amount = best_top10_retrieval - top10acc
+            improvementt10 = f"improved T10 by {improvementt10_amount:.4f}" if epoch > 0 else "first save"
+
+            # Delete previous best model if it exists
+            if best_model_path and os.path.exists(best_model_path):
+                os.remove(best_model_path)
+                print(f"-- Deleted previous best model: {os.path.basename(best_model_path)}")
+
+            # Update best loss and save new best model
+            best_top10_retrieval = top10acc
+            print(f"-- New best test loss! Saving 'improve' model... ({improvementt10})")
+            best_model_path = save_checkpoint(model, optimizer, epoch+1, test_loss, 
+                                    base_name="CVUSAGround2Satellite_improved")
+            saved=True
+
         # ROUTINE SAVING + DETAILED METRICS (every 5 epochs)
         if (epoch + 1) % 5 == 0:           
             # Routine save
