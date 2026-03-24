@@ -136,7 +136,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
         wandb.login()
         wandb.init(
             project="Ground2Satellite",
-            name=config.WANDB_RUN_NAME,
+            name=config.RUN_NAME,
             config={
                 "Total Epochs": num_epochs,
                 "lr": lr,
