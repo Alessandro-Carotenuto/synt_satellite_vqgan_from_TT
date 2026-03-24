@@ -331,8 +331,7 @@ def load_with_optimizer(checkpoint_path, vqgan_checkpoint_path=None, kaggle_flag
     model, checkpoint, device = load_saved_model(checkpoint_path, vqgan_checkpoint_path, kaggle_flag)   
     
     # Initialize optimizer for the transformer parameters only, since VQGAN is frozen and we are not updating its weights
-    optimizer = torch.optim.AdamW(model.transformer.parameters(), lr=lr, betas=(0.9, 0.95))
-
+    optimizer = get_optimizer(model, lr, weight_decay=0.1)
 
     # Load optimizer state if available in the checkpoint, this allows us to resume training with the same learning rate schedule and momentum, etc.
     if 'optimizer_state_dict' in checkpoint:
