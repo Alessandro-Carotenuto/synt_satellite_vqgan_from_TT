@@ -10,7 +10,7 @@ import config
 from config import LRMODE
 from CVUSA_Manager import CVUSADataset
 from taming_interface import download_taming_vqgan, save_checkpoint,manual_forward_pass, getDevice, build_model, get_optimizer
-
+import wandb
 
 def train_one_epoch(model, train_dataloader, optimizer, scaler, device, tmask_pkeep=1.0):
     """Train for one epoch and return average loss"""
@@ -115,6 +115,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
     if optimizer is None:
         optimizer = get_optimizer(model, lr, weight_decay=0.1)
 
+
     
     scaler = GradScaler()                                                                               #create the scaler
     match config.LEARNING_RATE_MODE:
@@ -124,6 +125,32 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
             scheduler = CosineAnnealingWarmRestarts(optimizer, T_0 = 10, T_mult=1, eta_min=1e-6)                      #Cosine Annealing for LR Scheduling
         case LRMODE.FIXED:
             pass
+    
+    if config.USE_WANDB:
+        if config.KAGGLE_FLAG:
+            import kaggle_secrets
+            os.environ["WANDB_API_KEY"] = kaggle_secrets.UserSecretsClient().get_secret("WANDB_API_KEY")
+        else:
+            from dotenv import load_dotenv
+            load_dotenv()
+        wandb.login()
+        wandb.init(
+            project="Ground2Satellite",
+            config={
+                "Total Epochs": num_epochs,
+                "lr": lr,
+                "Learning Rate Scheduling": config.LEARNING_RATE_MODE.name,
+                "batch_size": config.BATCH_SIZE,
+                "layers": config.LAYERS,
+                "heads": config.HEADS,
+                "dropout": config.DROPOUT,
+                "Token Masking initial %": config.TOKEN_MASKING_SCHEDULING_START,
+                "Token Masking final %": config.TOKEN_MASKING_SCHEDULING_END,
+                "Training Set Batches num": len(train_dataloader),
+                "Test Set Batches num": len(test_dataloader)
+            }
+        )
+    
     
     print(f"Starting training for {num_epochs} epochs...")
     print(f"Training set: {len(train_dataloader)} batches")
@@ -185,6 +212,19 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
         print(f"    Learning Rate:  {current_lr:.2e}")
         print(f"    Loss Gap (abs): {current_gap:.4f}")
 
+        if config.USE_WANDB:
+            wandb.log({
+                "train_loss": train_loss,
+                "test_loss": test_loss,
+                "top1_accuracy": top1acc,
+                "top10_accuracy": top10acc,
+                "perplexity": perp,
+                "learning_rate": current_lr,
+                "loss_gap": current_gap,
+                "epoch": epoch + 1,
+                "token_masking": current_token_masking,
+            })
+
         if gap_status:
             print(f"   {gap_status}")
         
@@ -239,6 +279,9 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
     if best_model_path:
         print(f"🥇 Best model: {os.path.basename(best_model_path)}")
 
+    if config.USE_WANDB:
+        wandb.finish()
+        
 def main():
     [configpath, checkpointpath] = download_taming_vqgan(version=16, kaggle_flag=config.KAGGLE_FLAG)     
     model, _, device = build_model(configpath, checkpointpath, getDevice())

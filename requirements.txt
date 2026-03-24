@@ -16,3 +16,5 @@ imageio             # ==2.9.0
 streamlit           # >=0.73.1
 tensorboard         # ==2.2.0
 PyYAML
+wandb
+python-dotenv       #To locally load the env file (to get the API key from wandb)
