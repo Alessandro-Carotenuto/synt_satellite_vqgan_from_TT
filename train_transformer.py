@@ -136,6 +136,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
         wandb.login()
         wandb.init(
             project="Ground2Satellite",
+            name=config.WANDB_RUN_NAME,
             config={
                 "Total Epochs": num_epochs,
                 "lr": lr,
@@ -215,6 +216,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
         if config.USE_WANDB:
             wandb.log({
                 "train_loss": train_loss,
+                
                 "test_loss": test_loss,
                 "top1_accuracy": top1acc,
                 "top10_accuracy": top10acc,
@@ -281,7 +283,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
 
     if config.USE_WANDB:
         wandb.finish()
-        
+
 def main():
     [configpath, checkpointpath] = download_taming_vqgan(version=16, kaggle_flag=config.KAGGLE_FLAG)     
     model, _, device = build_model(configpath, checkpointpath, getDevice())
