@@ -106,7 +106,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
     # Setup training parameters with weight decay
     device = getDevice()
     model = model.to(device)
-    model = torch.compile(model)  # Can give 10-20% speedup
+    #model = torch.compile(model)  # Can give 10-20% speedup
     
     # Use given optimizer or create a new one
     if optimizer is None:
