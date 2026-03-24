@@ -43,7 +43,7 @@ def train_one_epoch(model, train_dataloader, optimizer, scaler, device, tmask_pk
         num_batches += 1
         
         # Print progress every 50 batches
-        if batch_idx % 50 == 0:
+        if batch_idx % 1500 == 0:
             print(f"  Batch {batch_idx}, kLoss: {loss.item():.4f}")
     
     return epoch_loss / num_batches
@@ -83,6 +83,9 @@ def evaluate_model(model, test_dataloader, device):
             total_loss += loss.item()                          
             total_tokens += target.numel()
             num_batches += 1
+
+            if num_batches % 1500 == 0 or num_batches == total:
+                print(f"  Eval {num_batches}/{total}")
     
     # Calculate averages metrics and statistics
     avg_loss = total_loss / num_batches
