@@ -99,7 +99,7 @@ def evaluate_model(model, test_dataloader, device):
         'total_batches': num_batches
     }
 
-def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_epochs=50, lr=5e-4):
+def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_epochs=50, lr=5e-4, optimizer=None):
     """
     Modified training with train/test split and overfitting detection
     """
@@ -108,8 +108,11 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
     model = model.to(device)
     model = torch.compile(model)  # Can give 10-20% speedup
     
-    # Optimizer with weight decay for regularization
-    optimizer = get_optimizer(model, lr, weight_decay=0.1) #weight decay 0.01 was not enough
+    # Use given optimizer or create a new one
+    if optimizer is None:
+        optimizer = get_optimizer(model, lr, weight_decay=0.1)
+
+    
     scaler = GradScaler()                                                                               #create the scaler
     match config.LEARNING_RATE_MODE:
         case LRMODE.COSINEANNEALING:
