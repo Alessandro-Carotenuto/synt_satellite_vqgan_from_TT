@@ -84,8 +84,8 @@ def evaluate_model(model, test_dataloader, device):
             total_tokens += target.numel()
             num_batches += 1
 
-            if num_batches % 1500 == 0 or num_batches == total:
-                print(f"  Eval {num_batches}/{total}")
+            if num_batches % 1500 == 0:
+                print(f"  Eval {num_batches}")
     
     # Calculate averages metrics and statistics
     avg_loss = total_loss / num_batches
