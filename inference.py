@@ -103,24 +103,32 @@ def single_image_inference(model, ground_image_path, real_polar_path=None, devic
 # Testing the inference
 def test_inference(model, data_root, device='cpu'):
     """Run inference on the first 5 images of the val set"""
-    
+
     if config.OLD_SUBSET:
         csv_path = os.path.join(data_root, "val-19zl_fixed.csv")
     else:
         csv_path = os.path.join(data_root, "val.csv")
-    
+
     with open(csv_path, 'r', newline='', encoding='utf-8') as f:
         reader = csv.reader(f)
         next(reader)  # skip header
-        rows = list(reader)[:5]
-    
-    for idx, row in enumerate(rows):
-        polar_rel  = row[0].replace('\\', os.sep).strip()   
-        ground_rel = row[1].replace('\\', os.sep).strip()   
+        all_rows = list(reader)
+
+    found = 0
+    for row in all_rows:
+        if found >= 5:
+            break
+
+        polar_rel  = row[0].replace('\\', os.sep).strip()
+        ground_rel = row[1].replace('\\', os.sep).strip()
 
         polar_path  = os.path.join(data_root, polar_rel)
         ground_path = os.path.join(data_root, ground_rel)
 
-        print(f"\n--- Image {idx + 1}: {os.path.basename(ground_path)} ---")
+        # Mirror the same existence check CVUSADataset uses
+        if not os.path.exists(polar_path) or not os.path.exists(ground_path):
+            continue
+
+        found += 1
+        print(f"\n--- Image {found}: {os.path.basename(ground_path)} ---")
         single_image_inference(model, ground_path, real_polar_path=polar_path, device=device)
-    """Run inference on the first 5 images of the val set"""
