@@ -227,6 +227,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
                 "loss_gap": current_gap,
                 "epoch": absepoch,
                 "token_masking": current_token_masking,
+                "dropout": config.DROPOUT
             })
 
         if gap_status:
