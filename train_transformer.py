@@ -102,10 +102,11 @@ def evaluate_model(model, test_dataloader, device):
         'total_batches': num_batches
     }
 
-def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_epochs=50, lr=5e-4, optimizer=None):
+def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_epochs=50, lr=5e-4, optimizer=None,start_epoch=0):
     """
     Modified training with train/test split and overfitting detection
     """
+
     # Setup training parameters with weight decay
     device = getDevice()
     model = model.to(device)
@@ -122,7 +123,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
         case LRMODE.COSINEANNEALING:
             scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6)                            #Cosine Annealing for LR Scheduling
         case LRMODE.COSINEANNEALING_WR:
-            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0 = 10, T_mult=1, eta_min=1e-6)                      #Cosine Annealing for LR Scheduling
+            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0 = 5, T_mult=1, eta_min=1e-6)                      #Cosine Annealing for LR Scheduling
         case LRMODE.FIXED:
             pass
     
@@ -168,8 +169,9 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
     
     for epoch in range(num_epochs):
         saved=False
+        absepoch=start_epoch + epoch + 1 
         print(f"\n{'='*60}")
-        print(f"EPOCH {epoch + 1}/{num_epochs}")
+        print(f"EPOCH {absepoch}/{num_epochs}")
         print(f"{'='*60}")
 
         current_token_masking = config.TOKEN_MASKING_SCHEDULING_START + (epoch / num_epochs) * (config.TOKEN_MASKING_SCHEDULING_END - config.TOKEN_MASKING_SCHEDULING_START)
@@ -204,7 +206,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
         previous_gap = current_gap
         
         #PRINT EPOCH SUMMARY
-        print(f"\nEPOCH {epoch + 1} SUMMARY:")
+        print(f"\nEPOCH {absepoch} SUMMARY:")
         print(f"    Train Loss:     {train_loss:.4f}")
         print(f"    Test Loss:      {test_loss:.4f}")
         print(f"    Top1 Accuracy:  {top1acc:.3f} ({top1acc*100:.1f}%)")
@@ -216,14 +218,13 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
         if config.USE_WANDB:
             wandb.log({
                 "train_loss": train_loss,
-                
                 "test_loss": test_loss,
-                "top1_accuracy": top1acc,
-                "top10_accuracy": top10acc,
+                "top1_accuracy": top1acc*100,
+                "top10_accuracy": top10acc*100,
                 "perplexity": perp,
                 "learning_rate": current_lr,
                 "loss_gap": current_gap,
-                "epoch": epoch + 1,
+                "epoch": absepoch,
                 "token_masking": current_token_masking,
             })
 
@@ -244,7 +245,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
             # Update best loss and save new best model
             best_test_loss = test_loss
             print(f"-- New best test loss! Saving 'improve' model... ({improvement})")
-            best_model_path = save_checkpoint(model, optimizer, epoch+1, test_loss, 
+            best_model_path = save_checkpoint(model, optimizer, absepoch, test_loss, 
                                     base_name="CVUSAGround2Satellite_improved")
             saved=True
         
@@ -261,19 +262,19 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
             # Update best loss and save new best model
             best_top10_retrieval = top10acc
             print(f"-- New best test loss! Saving 'improve' model... ({improvementt10})")
-            best_model_path = save_checkpoint(model, optimizer, epoch+1, test_loss, 
+            best_model_path = save_checkpoint(model, optimizer, absepoch, test_loss, 
                                     base_name="CVUSAGround2Satellite_improved")
             saved=True
 
         # ROUTINE SAVING + DETAILED METRICS (every 5 epochs)
-        if (epoch + 1) % 5 == 0:           
+        if (absepoch) % 5 == 0:           
             # Routine save
             print("   Routine save...")
-            save_checkpoint(model, optimizer, epoch+1, test_loss, 
+            save_checkpoint(model, optimizer, absepoch, test_loss, 
                                     base_name="CVUSAGround2Satellite_routine")
             
             
-            print(f"   ✅ Epoch {epoch + 1} detailed evaluation complete")
+            print(f"   ✅ Epoch {absepoch} detailed evaluation complete")
     
     print(f"\n🎉 TRAINING COMPLETED!")
     print(f"🏆 Best test loss achieved: {best_test_loss:.4f}")
