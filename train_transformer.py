@@ -123,7 +123,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
         case LRMODE.COSINEANNEALING:
             scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6)                            #Cosine Annealing for LR Scheduling
         case LRMODE.COSINEANNEALING_WR:
-            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0 = 5, T_mult=1, eta_min=1e-6)                      #Cosine Annealing for LR Scheduling
+            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0 = 20, T_mult=1, eta_min=1e-6)                      #Cosine Annealing for LR Scheduling
         case LRMODE.FIXED:
             pass
     
