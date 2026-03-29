@@ -121,9 +121,9 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
     scaler = GradScaler()                                                                               #create the scaler
     match config.LEARNING_RATE_MODE:
         case LRMODE.COSINEANNEALING:
-            scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6)                            #Cosine Annealing for LR Scheduling
+            scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6, last_epoch=config.LAST_EPOCH)                            #Cosine Annealing for LR Scheduling
         case LRMODE.COSINEANNEALING_WR:
-            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0 = 20, T_mult=1, eta_min=1e-6)                      #Cosine Annealing for LR Scheduling
+            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0 = 20, T_mult=1, eta_min=1e-6, last_epoch=config.LAST_EPOCH)                      #Cosine Annealing for LR Scheduling
         case LRMODE.FIXED:
             pass
     
