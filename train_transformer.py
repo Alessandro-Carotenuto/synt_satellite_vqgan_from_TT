@@ -128,7 +128,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
             case LRMODE.FIXED:
                 scheduler = None # No scheduler, fixed learning rate
             case LRMODE.REDUCEONPLATEAU:
-                scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.65, patience=2, verbose=True, min_lr=1e-6) # Reduce LR on Plateau
+                scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.65, patience=2, min_lr=1e-6) # Reduce LR on Plateau
     
     scaler = GradScaler()  
     
