@@ -102,7 +102,7 @@ def evaluate_model(model, test_dataloader, device):
         'total_batches': num_batches
     }
 
-def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_epochs=50, lr=5e-4, optimizer=None,start_epoch=0):
+def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_epochs=50, lr=5e-4, optimizer=None,scheduler=None,start_epoch=0):
     """
     Modified training with train/test split and overfitting detection
     """
@@ -116,16 +116,19 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
     if optimizer is None:
         optimizer = get_optimizer(model, lr, weight_decay=0.1)
 
-
     
-    scaler = GradScaler()                                                                               #create the scaler
-    match config.LEARNING_RATE_MODE:
-        case LRMODE.COSINEANNEALING:
-            scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6, last_epoch=config.LAST_EPOCH)                            #Cosine Annealing for LR Scheduling
-        case LRMODE.COSINEANNEALING_WR:
-            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0 = 20, T_mult=1, eta_min=1e-6, last_epoch=config.LAST_EPOCH)                      #Cosine Annealing for LR Scheduling
-        case LRMODE.FIXED:
-            pass
+
+                                                                                 #create the scaler
+    if scheduler is None:
+        match config.LEARNING_RATE_MODE:
+            case LRMODE.COSINEANNEALING:
+                scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6, last_epoch=config.LAST_EPOCH)                            #Cosine Annealing for LR Scheduling
+            case LRMODE.COSINEANNEALING_WR:
+                scheduler = CosineAnnealingWarmRestarts(optimizer, T_0 = config.WARM_RESTART_CYCLE-1, T_mult=1, eta_min=1e-6, last_epoch=config.LAST_EPOCH)                      #Cosine Annealing for LR Scheduling
+            case LRMODE.FIXED:
+                scheduler = None # No scheduler, fixed learning rate
+    
+    scaler = GradScaler()  
     
     if config.USE_WANDB:
         if config.KAGGLE_FLAG:
@@ -191,8 +194,15 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
 
         
         # UPDATE LEARNING RATE
-        if config.LEARNING_RATE_MODE != LRMODE.FIXED:
-            scheduler.step()
+
+        match config.LEARNING_RATE_MODE:
+            case LRMODE.COSINEANNEALING:
+                scheduler.step()
+            case LRMODE.COSINEANNEALING_WR:
+                scheduler.step() 
+            case LRMODE.FIXED:
+                pass
+
         current_lr = optimizer.param_groups[0]['lr']
         
         # OVERFITTING DETECTION (using absolute value)
@@ -247,7 +257,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
             # Update best loss and save new best model
             best_test_loss = test_loss
             print(f"-- New best test loss! Saving 'improve' model... ({improvement})")
-            best_model_path = save_checkpoint(model, optimizer, absepoch, test_loss, 
+            best_model_path = save_checkpoint(model, optimizer, scheduler, absepoch, test_loss, 
                                     base_name="CVUSAGround2Satellite_improved")
             saved=True
         
@@ -264,7 +274,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
             # Update best loss and save new best model
             best_top10_retrieval = top10acc
             print(f"-- New best test loss! Saving 'improve' model... ({improvementt10})")
-            best_model_path = save_checkpoint(model, optimizer, absepoch, test_loss, 
+            best_model_path = save_checkpoint(model, optimizer, scheduler, absepoch, test_loss, 
                                     base_name="CVUSAGround2Satellite_improved")
             saved=True
 
@@ -272,7 +282,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
         if (absepoch) % 5 == 0:           
             # Routine save
             print("   Routine save...")
-            save_checkpoint(model, optimizer, absepoch, test_loss, 
+            save_checkpoint(model, optimizer, scheduler, absepoch, test_loss, 
                                     base_name="CVUSAGround2Satellite_routine")
             
             

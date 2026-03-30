@@ -256,7 +256,7 @@ def manual_forward_pass(model, satellite_imgs, ground_imgs, tmasking_pkeep=1.0):
     return logits, target
 
 # SAVING, LOADING AND CHECKPOINTING FUNCTIONS FOR THE TRANSFORMER MODEL (VQ-GAN IS FROZEN, SO WE ONLY SAVE THE TRANSFORMER WEIGHTS AND OPTIMIZER STATE)
-def save_checkpoint(model, optimizer, epoch, loss, base_name="cvusa_ground2satellite", save_dir=None):
+def save_checkpoint(model, optimizer, scheduler, epoch, loss, base_name="cvusa_ground2satellite", save_dir=None):
     """Save only the transformer weights — VQGAN is frozen and doesn't need saving"""
     
     # IF save_dir is not provided, use the current working directory
@@ -275,6 +275,8 @@ def save_checkpoint(model, optimizer, epoch, loss, base_name="cvusa_ground2satel
         'epoch': epoch,
         'transformer_state_dict': model.transformer.state_dict(),           # Only transformer weights
         'optimizer_state_dict': optimizer.state_dict(),                     # Optimizer state to resume training same learning rate and momentum, etc.
+        'scheduler_type':       config.LEARNING_RATE_MODE,                  # Save the type of scheduler to know how to restore it
+        'scheduler_state_dict': scheduler.state_dict() if scheduler is not None else None,              
         'loss': loss,                                                       # Save the loss value
         'timestamp': timestamp,                                             # Save the timestamp for reference
         'transformer_config': {                                             # Save the transformer configuration for reference and reproducibility
@@ -339,8 +341,21 @@ def load_with_optimizer(checkpoint_path, vqgan_checkpoint_path=None, kaggle_flag
         print("✅ Optimizer state restored")
     else:
         print("⚠️  No optimizer state found, using fresh optimizer")
+
+    match checkpoint['scheduler_type']:
+        case config.LRMODE.COSINEANNEALING:
+            scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6)
+        case config.LRMODE.COSINEANNEALING_WR:
+            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=4, T_mult=1, eta_min=1e-6)
+        case config.LRMODE.FIXED:
+            scheduler = None # No scheduler, fixed learning rate
     
-    return model, optimizer, checkpoint, device
+    if scheduler is not None and checkpoint['scheduler_state_dict'] is not None:
+        scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+        print("✅ Scheduler state restored")
+    
+    
+    return model, optimizer, scheduler, checkpoint, device
 
 def find_latest_checkpoint(base_name, save_dir=None):
     """Find the most recently modified checkpoint matching base_name"""
