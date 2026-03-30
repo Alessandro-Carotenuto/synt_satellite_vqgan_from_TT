@@ -127,6 +127,8 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
                 scheduler = CosineAnnealingWarmRestarts(optimizer, T_0 = config.WARM_RESTART_CYCLE-1, T_mult=1, eta_min=1e-6, last_epoch=config.LAST_EPOCH)                      #Cosine Annealing for LR Scheduling
             case LRMODE.FIXED:
                 scheduler = None # No scheduler, fixed learning rate
+            case LRMODE.REDUCEONPLATEAU:
+                scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, verbose=True, min_lr=1e-6) # Reduce LR on Plateau
     
     scaler = GradScaler()  
     
@@ -199,7 +201,9 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
             case LRMODE.COSINEANNEALING:
                 scheduler.step()
             case LRMODE.COSINEANNEALING_WR:
-                scheduler.step() 
+                scheduler.step()
+            case LRMODE.REDUCEONPLATEAU:
+                scheduler.step(test_loss)
             case LRMODE.FIXED:
                 pass
 
