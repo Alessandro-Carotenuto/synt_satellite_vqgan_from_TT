@@ -342,6 +342,8 @@ def load_with_optimizer(checkpoint_path, vqgan_checkpoint_path=None, kaggle_flag
     else:
         print("⚠️  No optimizer state found, using fresh optimizer")
 
+    scheduler = None
+
     match checkpoint['scheduler_type']:
         case config.LRMODE.COSINEANNEALING:
             scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6)
