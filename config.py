@@ -31,6 +31,7 @@ BATCH_SIZE = 8
 DROPOUT=0.25 #25%
 TOKEN_MASKING_SCHEDULING_START=1.0
 TOKEN_MASKING_SCHEDULING_END=0.8
+PATIENCE_FOR_LRREDUCEONPLATEAU=2
 
 #LOGGING
 USE_WANDB = False       # Set to True to enable experiment tracking (requires wandb account)
