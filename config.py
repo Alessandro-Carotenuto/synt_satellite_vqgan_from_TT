@@ -37,6 +37,7 @@ PATIENCE_FOR_LRREDUCEONPLATEAU=2
 USE_WANDB = False       # Set to True to enable experiment tracking (requires wandb account)
 RUN_NAME = "default_run_name"
 WANDB_GROUP = 'default_group_name'
+IDENTIFIER = 'more_info'
 
 #ARCHITECTURE OPTIONS
 HEADS=8     #8
