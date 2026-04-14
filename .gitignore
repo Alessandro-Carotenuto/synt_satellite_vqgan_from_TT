@@ -6,3 +6,4 @@ __pycache__/
 CVUSA_subset_csvfixed/
 test.py
 apikeys.env
+encoding.py
