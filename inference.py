@@ -114,21 +114,21 @@ def test_inference(model, data_root, device='cpu'):
         next(reader)  # skip header
         all_rows = list(reader)
 
-    found = 0
+    b=config.INFERENCE_FROM
+    e=config.INFERENCE_TO
+    i=0
     for row in all_rows:
-        if found >= 5:
-            break
+        if i>=b and i<e:
+            polar_rel  = row[0].replace('\\', os.sep).strip()
+            ground_rel = row[1].replace('\\', os.sep).strip()
 
-        polar_rel  = row[0].replace('\\', os.sep).strip()
-        ground_rel = row[1].replace('\\', os.sep).strip()
+            polar_path  = os.path.join(data_root, polar_rel)
+            ground_path = os.path.join(data_root, ground_rel)
 
-        polar_path  = os.path.join(data_root, polar_rel)
-        ground_path = os.path.join(data_root, ground_rel)
+            # Mirror the same existence check CVUSADataset uses
+            if not os.path.exists(polar_path) or not os.path.exists(ground_path):
+                continue
 
-        # Mirror the same existence check CVUSADataset uses
-        if not os.path.exists(polar_path) or not os.path.exists(ground_path):
-            continue
-
-        found += 1
-        print(f"\n--- Image {found}: {os.path.basename(ground_path)} ---")
-        single_image_inference(model, ground_path, real_polar_path=polar_path, device=device)
+            print(f"\n--- Image {found}: {os.path.basename(ground_path)} ---")
+            single_image_inference(model, ground_path, real_polar_path=polar_path, device=device)
+        i+=1
