@@ -129,6 +129,6 @@ def test_inference(model, data_root, device='cpu'):
             if not os.path.exists(polar_path) or not os.path.exists(ground_path):
                 continue
 
-            print(f"\n--- Image {found}: {os.path.basename(ground_path)} ---")
+            print(f"\n--- Image {i}: {os.path.basename(ground_path)} ---")
             single_image_inference(model, ground_path, real_polar_path=polar_path, device=device)
         i+=1
