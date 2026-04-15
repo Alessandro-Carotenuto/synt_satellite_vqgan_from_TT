@@ -22,6 +22,8 @@ def main():
     if not os.path.exists("taming-transformers"):
         print("\n📥 Cloning taming-transformers...")
         run_command("git clone https://github.com/CompVis/taming-transformers.git")
+    else:
+        print("ALREADY PRESENT!")
     
     print("\n📦 Installing taming-transformers...")
     original_dir = os.getcwd()

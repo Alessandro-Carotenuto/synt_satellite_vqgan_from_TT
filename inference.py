@@ -17,7 +17,7 @@ def tensor_to_displayable(tensor):
         return img.permute(1, 2, 0).clamp(0, 1)
 
 # Inference for one image
-def single_image_inference(model, ground_image_path, real_polar_path=None, device='cpu', temperature=1.0, top_k=600, top_p=0.92, save_image=False, nameadd=""):
+def single_image_inference(model, ground_image_path, real_polar_path=None, device='cpu', temperature=config.TEMPERATURE, top_k=config.TOP_K, top_p=config.TOP_P, save_image=False, nameadd=""):
     # Carica e preprocessa l'immagine ground
     ground_pil = Image.open(ground_image_path).convert('RGB')
     transform = get_standard_transform()
