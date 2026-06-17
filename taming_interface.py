@@ -16,6 +16,8 @@ if _taming_path not in sys.path:
 
 from taming.models.vqgan import VQModel
 from taming.models.cond_transformer import Net2NetTransformer
+from fixermodule import fix_inject_rope
+fix_inject_rope()
 
 # GET AVAILABLE DEVICE
 def getDevice():
@@ -130,7 +132,8 @@ def create_config(configpath):
                 # --- ADDED DROPOUT FOR REGULARIZATION ---
                 "embd_pdrop": config.DROPOUT,    # Dropout on embeddings
                 "resid_pdrop": config.DROPOUT,   # Dropout on residual connections
-                "attn_pdrop": config.DROPOUT     # Dropout on attention weights
+                "attn_pdrop": config.DROPOUT,    # Dropout on attention weights
+                "use_rope": config.USE_ROPE      # Rotary positional embeddings (True = no learned pos_emb)
             }
         }
     })

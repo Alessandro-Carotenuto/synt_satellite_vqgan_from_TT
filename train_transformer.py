@@ -168,6 +168,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
     print(f"Learning rate: {lr}, Weight decay: 0.01")
     print(f"Token masking: {config.TOKEN_MASKING_SCHEDULING_START}, to {config.TOKEN_MASKING_SCHEDULING_END}, in {num_epochs}")
     print(f"Training on device: {device}")
+    print(f"Positional encoding: {'RoPE' if config.USE_ROPE else 'learned absolute'}")
     
     # Tracking variables
     best_test_loss = float('inf')
@@ -241,10 +242,9 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
                 "perplexity": perp,
                 "learning_rate": current_lr,
                 "loss_gap": current_gap,
-                "epoch": absepoch,
                 "token_masking": current_token_masking,
                 "dropout": config.DROPOUT
-            })
+            }, step=absepoch)
 
         if gap_status:
             print(f"   {gap_status}")

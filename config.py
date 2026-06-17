@@ -48,6 +48,7 @@ BACKBONE_SIZE = BBSIZE.LARGE  # LARGE = 16384 codebook, SMALL = 1024 codebook
 #ARCHITECTURE OPTIONS
 HEADS=8     #8
 LAYERS=6   #12
+USE_ROPE=False  # True: RoPE positional encoding (requires retraining from scratch); False: learned absolute pos embedding
 
 #INFERENCE TEST
 INFERENCE_FROM = 0
