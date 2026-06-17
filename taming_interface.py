@@ -122,7 +122,7 @@ def create_config(configpath):
         "transformer_config": {
             "target": "taming.modules.transformer.mingpt.GPT",
             "params": {
-                "vocab_size": 16384,  # This matches the codebook size of the VQ-GAN
+                "vocab_size": 16384 if config.BACKBONE_SIZE == config.BBSIZE.LARGE else 1024,
                 "block_size": 512,    # Sequence length (for 16x16 = 256 tokens x2)
                 "n_layer": config.LAYERS,        # Number of transformer layers, can be adjusted based on model capacity needs
                 "n_head": config.HEADS,          # Number of attention heads, can be adjusted based on model capacity needs
@@ -164,18 +164,21 @@ def get_optimizer(model, lr, weight_decay=0.0):
     return optim.AdamW(optim_groups, lr=lr, betas=(0.9, 0.95))
 
 # VQ-GAN DOWNLOADING, LOADING AND CHECKPOINTING FUNCTIONS
-def download_taming_vqgan(version=16, kaggle_flag=False):  
+def download_taming_vqgan(kaggle_flag=False):
     if kaggle_flag:
         os.makedirs('/kaggle/working/models', exist_ok=True)
     else:
         os.makedirs('models', exist_ok=True)
-    
 
-    #16 == f16 & 16384
-    if version==16:
+    if config.BACKBONE_SIZE == config.BBSIZE.LARGE:
         model_urls = {
             'vqgan_imagenet_f16_16384.yaml': 'https://heibox.uni-heidelberg.de/d/a7530b09fed84f80a887/files/?p=%2Fconfigs%2Fmodel.yaml&dl=1',
             'vqgan_imagenet_f16_16384.ckpt': 'https://heibox.uni-heidelberg.de/d/a7530b09fed84f80a887/files/?p=%2Fckpts%2Flast.ckpt&dl=1'
+        }
+    else:  # SMALL
+        model_urls = {
+            'vqgan_imagenet_f16_1024.yaml': 'https://heibox.uni-heidelberg.de/d/8088892a516d4e3baf92/files/?p=%2Fconfigs%2Fmodel.yaml&dl=1',
+            'vqgan_imagenet_f16_1024.ckpt': 'https://heibox.uni-heidelberg.de/d/8088892a516d4e3baf92/files/?p=%2Fckpts%2Flast.ckpt&dl=1'
         }
     
     filepaths=[]
@@ -276,9 +279,10 @@ def save_checkpoint(model, optimizer, scheduler, epoch, loss, base_name="cvusa_g
         'transformer_state_dict': model.transformer.state_dict(),           # Only transformer weights
         'optimizer_state_dict': optimizer.state_dict(),                     # Optimizer state to resume training same learning rate and momentum, etc.
         'scheduler_type':       config.LEARNING_RATE_MODE,                  # Save the type of scheduler to know how to restore it
-        'scheduler_state_dict': scheduler.state_dict() if scheduler is not None else None,              
+        'scheduler_state_dict': scheduler.state_dict() if scheduler is not None else None,
         'loss': loss,                                                       # Save the loss value
         'timestamp': timestamp,                                             # Save the timestamp for reference
+        'backbone_size': config.BACKBONE_SIZE,                              # VQGAN backbone used — must match on load
         'transformer_config': {                                             # Save the transformer configuration for reference and reproducibility
             'vocab_size': model.transformer.config.vocab_size,
             'block_size': model.transformer.config.block_size,
@@ -298,24 +302,29 @@ def load_saved_model(checkpoint_path, vqgan_checkpoint_path=None, kaggle_flag=Fa
     then load the saved transformer weights on top.
     """
 
-    # Load checkpoint
     if not os.path.exists(checkpoint_path):
         raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
-    
-    # Get VQGAN — download if not provided, from the hardcoded path
-    if vqgan_checkpoint_path is None:
-        print("No VQGAN path provided, downloading...")
-        [configpath, vqgan_checkpoint_path] = download_taming_vqgan(version=16, kaggle_flag=kaggle_flag)
-    else:
-        # Still need the config path
-        [configpath, _] = download_taming_vqgan(version=16, kaggle_flag=kaggle_flag)
-    
-    # Rebuild model
-    model, _, device = build_model(configpath, vqgan_checkpoint_path, getDevice())
 
-    # Load the checkpoint with weights_only=False to get the full checkpoint including epoch and loss information
-    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)                   
+    # Load checkpoint first to read backbone info before building the model
+    device = getDevice()
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     print(f"Checkpoint loaded — epoch {checkpoint['epoch']}, loss {checkpoint['loss']:.4f}")
+
+    # Set backbone size from checkpoint so the right VQGAN is downloaded and built
+    ckpt_backbone = checkpoint.get('backbone_size', None)
+    if ckpt_backbone is None:
+        print("⚠️  Checkpoint has no backbone_size info (old format) — assuming LARGE")
+    else:
+        config.BACKBONE_SIZE = ckpt_backbone
+        print(f"Backbone set to {config.BACKBONE_SIZE.name} from checkpoint")
+
+    # Download and build VQGAN using the backbone from the checkpoint
+    if vqgan_checkpoint_path is None:
+        [configpath, vqgan_checkpoint_path] = download_taming_vqgan(kaggle_flag=kaggle_flag)
+    else:
+        [configpath, _] = download_taming_vqgan(kaggle_flag=kaggle_flag)
+
+    model, _, device = build_model(configpath, vqgan_checkpoint_path, device)
 
     # Load transformer weights
     model.transformer.load_state_dict(checkpoint['transformer_state_dict'])

@@ -8,11 +8,14 @@ class LRMODE(Enum):
     COSINEANNEALING_WR=2
     REDUCEONPLATEAU=3
 
+class BBSIZE(Enum):
+    LARGE=0  # vqgan_imagenet_f16_16384 — codebook 16384
+    SMALL=1  # vqgan_imagenet_f16_1024  — codebook 1024
+
 # ========================
 # USER CONFIGURATION
 # ========================
 
-# Automatically True if running on Kaggle, False otherwise
 KAGGLE_FLAG = "KAGGLE_KERNEL_RUN_TYPE" in os.environ
 OLD_SUBSET=False
 
@@ -39,13 +42,16 @@ RUN_NAME = "default_run_name"
 WANDB_GROUP = 'default_group_name'
 IDENTIFIER = 'more_info'
 
+#BACKBONE
+BACKBONE_SIZE = BBSIZE.LARGE  # LARGE = 16384 codebook, SMALL = 1024 codebook
+
 #ARCHITECTURE OPTIONS
 HEADS=8     #8
 LAYERS=6   #12
 
 #INFERENCE TEST
 INFERENCE_FROM = 0
-INFERENCE_TO =4
+INFERENCE_TO =5
 TEMPERATURE = 1.0
 TOP_K = 600
 TOP_P = 0.92

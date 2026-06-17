@@ -156,7 +156,8 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
                 "Token Masking initial %": config.TOKEN_MASKING_SCHEDULING_START,
                 "Token Masking final %": config.TOKEN_MASKING_SCHEDULING_END,
                 "Training Set Batches num": len(train_dataloader),
-                "Test Set Batches num": len(test_dataloader)
+                "Test Set Batches num": len(test_dataloader),
+                "backbone": config.BACKBONE_SIZE.name,
             }
         )
     
@@ -303,7 +304,7 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
         wandb.finish()
 
 def main():
-    [configpath, checkpointpath] = download_taming_vqgan(version=16, kaggle_flag=config.KAGGLE_FLAG)     
+    [configpath, checkpointpath] = download_taming_vqgan(kaggle_flag=config.KAGGLE_FLAG)     
     model, _, device = build_model(configpath, checkpointpath, getDevice())
 
     train_loader, test_loader = CVUSADataset.create_dataloaders(
