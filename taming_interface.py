@@ -329,8 +329,13 @@ def load_saved_model(checkpoint_path, vqgan_checkpoint_path=None, kaggle_flag=Fa
 
     model, _, device = build_model(configpath, vqgan_checkpoint_path, device)
 
-    # Load transformer weights
-    model.transformer.load_state_dict(checkpoint['transformer_state_dict'])
+    # Load transformer weights — strict=False handles pos_emb→RoPE migration:
+    # checkpoint may have pos_emb (old arch) while current model has rope_cos/rope_sin buffers
+    result = model.transformer.load_state_dict(checkpoint['transformer_state_dict'], strict=False)
+    if result.missing_keys:
+        print(f"ℹ️  Missing keys (expected for RoPE buffers): {result.missing_keys}")
+    if result.unexpected_keys:
+        print(f"ℹ️  Unexpected keys (ignored, e.g. old pos_emb): {result.unexpected_keys}")
     print("✅ Transformer weights loaded from checkpoint:", checkpoint_path)
 
     # Move model to device
