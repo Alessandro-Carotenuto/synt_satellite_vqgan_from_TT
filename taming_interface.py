@@ -157,9 +157,9 @@ def get_optimizer(model, lr, weight_decay=0.0):
             elif pn.endswith('weight') and isinstance(m, (torch.nn.LayerNorm, torch.nn.Embedding)):
                 no_decay.add(fpn)
 
-    no_decay.add('pos_emb')
-
     param_dict = {pn: p for pn, p in model.transformer.named_parameters()}
+    if 'pos_emb' in param_dict:
+        no_decay.add('pos_emb')
     optim_groups = [
         {"params": [param_dict[pn] for pn in sorted(decay)], "weight_decay": weight_decay},
         {"params": [param_dict[pn] for pn in sorted(no_decay)], "weight_decay": 0.0},
