@@ -2,6 +2,7 @@ from glob import glob
 import os                                   
 import urllib.request
 from torch import optim
+from torch.optim.lr_scheduler import CosineAnnealingLR, CosineAnnealingWarmRestarts, ReduceLROnPlateau
 import yaml
 from datetime import datetime
 import sys
@@ -366,6 +367,8 @@ def load_with_optimizer(checkpoint_path, vqgan_checkpoint_path=None, kaggle_flag
             scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6)
         case config.LRMODE.COSINEANNEALING_WR:
             scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=4, T_mult=1, eta_min=1e-6)
+        case config.LRMODE.REDUCEONPLATEAU:
+            scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=config.PATIENCE_FOR_LRREDUCEONPLATEAU, factor=0.5)
         case config.LRMODE.FIXED:
             scheduler = None # No scheduler, fixed learning rate
     
