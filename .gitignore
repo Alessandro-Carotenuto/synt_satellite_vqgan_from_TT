@@ -7,3 +7,5 @@ CVUSA_subset_csvfixed/
 test.py
 apikeys.env
 encoding.py
+CLAUDE.md
+.claude/
