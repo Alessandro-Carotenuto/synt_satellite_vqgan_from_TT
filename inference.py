@@ -7,6 +7,16 @@ from fixermodule import top_k_top_p_filtering
 from CVUSA_Manager import get_standard_transform
 import csv
 import config
+import lpips
+
+_lpips_fn = None
+
+def get_lpips_fn(device):
+    global _lpips_fn
+    if _lpips_fn is None:
+        _lpips_fn = lpips.LPIPS(net='vgg').to(device)
+        _lpips_fn.eval()
+    return _lpips_fn
 
 
 
@@ -66,7 +76,15 @@ def single_image_inference(model, ground_image_path, real_polar_path=None, devic
     # Preparazione display
     ground_display = tensor_to_displayable(ground_tensor)
     generated_display = tensor_to_displayable(generated_satellite_tensor)
-    
+
+    # LPIPS between generated and ground truth satellite
+    lpips_score = None
+    if real_polar_path:
+        lpips_fn = get_lpips_fn(device)
+        with torch.no_grad():
+            lpips_score = lpips_fn(generated_satellite_tensor, real_polar_tensor).item()
+        print(f"  LPIPS (generated vs target): {lpips_score:.4f}")
+
     # Visualizzazione (3 colonne se abbiamo la reale, altrimenti 2)
     n_cols = 3 if real_polar_display is not None else 2
     fig, axes = plt.subplots(1, n_cols, figsize=(6 * n_cols, 6))
@@ -84,7 +102,8 @@ def single_image_inference(model, ground_image_path, real_polar_path=None, devic
         
         # 3. OUTPUT GENERATO (Destra)
         axes[2].imshow(generated_display)
-        axes[2].set_title("OUTPUT\n(Generated)", fontsize=14, fontweight='bold', color='blue')
+        title = f"OUTPUT\n(Generated)" + (f"\nLPIPS: {lpips_score:.4f}" if lpips_score is not None else "")
+        axes[2].set_title(title, fontsize=14, fontweight='bold', color='blue')
         axes[2].axis('off')
     else:
         # 2. OUTPUT GENERATO (Destra) se manca la reale
@@ -98,7 +117,7 @@ def single_image_inference(model, ground_image_path, real_polar_path=None, devic
     to_pil = transforms.ToPILImage()
     generated_satellite_pil = to_pil(generated_display.permute(2, 0, 1))
     
-    return generated_satellite_pil, ground_pil
+    return generated_satellite_pil, ground_pil, lpips_score
 
 # Testing the inference
 def test_inference(model, data_root, device='cpu'):
