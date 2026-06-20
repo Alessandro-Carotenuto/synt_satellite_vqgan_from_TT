@@ -364,9 +364,9 @@ def load_with_optimizer(checkpoint_path, vqgan_checkpoint_path=None, kaggle_flag
 
     match checkpoint['scheduler_type']:
         case config.LRMODE.COSINEANNEALING:
-            scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6)
+            scheduler = CosineAnnealingLR(optimizer, T_max=config.NUM_EPOCHS, eta_min=1e-6)
         case config.LRMODE.COSINEANNEALING_WR:
-            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=4, T_mult=1, eta_min=1e-6)
+            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=config.WARM_RESTART_CYCLE - 1, T_mult=1, eta_min=1e-6)
         case config.LRMODE.REDUCEONPLATEAU:
             scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=config.PATIENCE_FOR_LRREDUCEONPLATEAU, factor=0.5)
         case config.LRMODE.FIXED:

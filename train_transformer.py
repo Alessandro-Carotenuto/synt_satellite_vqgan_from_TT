@@ -160,8 +160,10 @@ def train_model_with_evaluation(model, train_dataloader, test_dataloader, num_ep
                 "backbone": config.BACKBONE_SIZE.name,
             }
         )
-    
-    
+        if start_epoch > 0:
+            wandb.log({"learning_rate": optimizer.param_groups[0]['lr']}, step=start_epoch)
+
+
     print(f"Starting training for {num_epochs} epochs...")
     print(f"Training set: {len(train_dataloader)} batches")
     print(f"Test set: {len(test_dataloader)} batches")
