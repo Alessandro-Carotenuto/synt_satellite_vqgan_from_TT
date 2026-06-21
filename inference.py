@@ -13,8 +13,8 @@ _lpips_fn = None
 def get_lpips_fn(device):
     global _lpips_fn
     if _lpips_fn is None:
-        import lpips
-        _lpips_fn = lpips.LPIPS(net='vgg').to(device)
+        from taming.modules.losses.lpips import LPIPS
+        _lpips_fn = LPIPS().to(device)
         _lpips_fn.eval()
     return _lpips_fn
 
