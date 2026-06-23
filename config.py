@@ -54,5 +54,5 @@ USE_ROPE=False  # True: RoPE positional encoding (requires retraining from scrat
 INFERENCE_FROM = 0
 INFERENCE_TO =5
 TEMPERATURE = 0.7
-TOP_K = 100
+TOP_K = 10
 TOP_P = 0.85
