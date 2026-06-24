@@ -52,12 +52,16 @@ def single_image_inference(model, ground_image_path, real_polar_path=None, devic
             ground_tokens_per_image = ground_indices.shape[0] // batch_size  
             ground_indices = ground_indices.view(batch_size, ground_tokens_per_image)
         
-        import taming.modules.transformer.mingpt as _mgpt
+        sequence = ground_indices
         satellite_seq_length = 256
-        generated_tokens = _mgpt.sample_with_past(
-            ground_indices, model.transformer, steps=satellite_seq_length,
-            temperature=temperature, sample_logits=True, top_k=top_k, top_p=top_p
-        )
+        for i in range(satellite_seq_length):
+            logits, _ = model.transformer(sequence)
+            next_token_logits = logits[:, -1, :] / temperature
+            filtered_logits = top_k_top_p_filtering(next_token_logits, top_k=top_k, top_p=top_p)
+            probs = torch.softmax(filtered_logits, dim=-1)
+            next_token = torch.multinomial(probs, 1)
+            sequence = torch.cat([sequence, next_token], dim=1)
+        generated_tokens = sequence[:, -satellite_seq_length:]
         
         # Decode
         h = w = 16
