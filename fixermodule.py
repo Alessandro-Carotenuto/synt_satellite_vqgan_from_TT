@@ -236,6 +236,104 @@ def fix_inject_rope():
     print("FIX: RoPE support injected into mingpt!")
 
 
+def fix_inject_kv_cache():
+    """Monkey-patch mingpt with pre-allocated KV cache inference.
+    Adds forward_with_cache to CausalSelfAttention, Block, GPT,
+    and sample_with_cache as a module-level function.
+    Must be called after fix_inject_rope (taming must be importable).
+    """
+    import math
+    import torch
+    import torch.nn.functional as F
+    import taming.modules.transformer.mingpt as m
+
+    def _csa_forward_with_cache(self, x, kv_cache, cache_len):
+        """kv_cache: (2, B, n_head, max_len, head_dim) — writes K,V in-place, no allocation."""
+        B, T, C = x.size()
+        hs = C // self.n_head
+        k = self.key(x).view(B, T, self.n_head, hs).transpose(1, 2)
+        q = self.query(x).view(B, T, self.n_head, hs).transpose(1, 2)
+        v = self.value(x).view(B, T, self.n_head, hs).transpose(1, 2)
+        if self.use_rope:
+            q = m._apply_rope(q, self.rope_cos, self.rope_sin, start=cache_len)
+            k = m._apply_rope(k, self.rope_cos, self.rope_sin, start=cache_len)
+        kv_cache[0, :, :, cache_len:cache_len + T, :] = k
+        kv_cache[1, :, :, cache_len:cache_len + T, :] = v
+        new_total = cache_len + T
+        K_all = kv_cache[0, :, :, :new_total, :]
+        V_all = kv_cache[1, :, :, :new_total, :]
+        att = (q @ K_all.transpose(-2, -1)) * (1.0 / math.sqrt(hs))
+        att = att.masked_fill(self.mask[:, :, cache_len:cache_len + T, :new_total] == 0, float('-inf'))
+        att = F.softmax(att, dim=-1)
+        att = self.attn_drop(att)
+        y = (att @ V_all).transpose(1, 2).contiguous().view(B, T, C)
+        return self.resid_drop(self.proj(y))
+
+    def _block_forward_with_cache(self, x, layer_kv_cache, cache_len):
+        x = x + self.attn.forward_with_cache(self.ln1(x), layer_kv_cache, cache_len)
+        x = x + self.mlp(self.ln2(x))
+        return x
+
+    def _gpt_forward_with_cache(self, idx, kv_cache, cache_len, embeddings=None):
+        """kv_cache: (n_layer, 2, B, n_head, max_len, head_dim). Returns (logits, new_cache_len)."""
+        assert not self.training
+        token_embeddings = self.tok_emb(idx)
+        if embeddings is not None:
+            token_embeddings = torch.cat((embeddings, token_embeddings), dim=1)
+        T = token_embeddings.shape[1]
+        if not self.use_rope:
+            x = self.drop(token_embeddings + self.pos_emb[:, cache_len:cache_len + T, :])
+        else:
+            x = self.drop(token_embeddings)
+        for i, block in enumerate(self.blocks):
+            x = block.forward_with_cache(x, kv_cache[i], cache_len)
+        x = self.ln_f(x)
+        return self.head(x), cache_len + T
+
+    @torch.no_grad()
+    def _sample_with_cache(x, model, steps, temperature=1., sample_logits=True,
+                           top_k=None, top_p=None, callback=None):
+        """Autoregressive sampling with pre-allocated KV cache — no torch.cat per step."""
+        assert not model.training
+        B = x.shape[0]
+        device = x.device
+        cfg = model.config
+        head_dim = cfg.n_embd // cfg.n_head
+        dtype = next(model.parameters()).dtype
+
+        kv_cache = torch.zeros(
+            cfg.n_layer, 2, B, cfg.n_head, cfg.block_size, head_dim,
+            device=device, dtype=dtype
+        )
+
+        cond_len = x.shape[1]
+        sample = x
+
+        logits, cache_len = model.forward_with_cache(x, kv_cache, cache_len=0)
+        logits = logits[:, -1, :] / temperature
+
+        for n in range(steps):
+            if callback is not None:
+                callback(n)
+            filtered = top_k_top_p_filtering(logits, top_k=top_k or 0, top_p=top_p or 1.0)
+            probs = F.softmax(filtered, dim=-1)
+            x_new = torch.multinomial(probs, 1) if sample_logits else torch.topk(probs, 1, dim=-1)[1]
+            sample = torch.cat([sample, x_new], dim=1)
+            if n < steps - 1:
+                logits, cache_len = model.forward_with_cache(x_new, kv_cache, cache_len=cache_len)
+                logits = logits[:, 0, :] / temperature
+
+        del kv_cache
+        return sample[:, cond_len:]
+
+    m.CausalSelfAttention.forward_with_cache = _csa_forward_with_cache
+    m.Block.forward_with_cache               = _block_forward_with_cache
+    m.GPT.forward_with_cache                 = _gpt_forward_with_cache
+    m.sample_with_cache                      = _sample_with_cache
+
+    print("FIX: pre-allocated KV cache injected into mingpt!")
+
+
 fix_torch_import_issue(kaggle_flag="KAGGLE_KERNEL_RUN_TYPE" in os.environ)
 fix_inject_top_k_p_filtering()
 

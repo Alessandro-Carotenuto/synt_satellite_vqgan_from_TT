@@ -52,28 +52,12 @@ def single_image_inference(model, ground_image_path, real_polar_path=None, devic
             ground_tokens_per_image = ground_indices.shape[0] // batch_size  
             ground_indices = ground_indices.view(batch_size, ground_tokens_per_image)
         
-        # Generazione autoregressiva con KV cache
-        sequence = ground_indices
+        import taming.modules.transformer.mingpt as _mgpt
         satellite_seq_length = 256
-
-        cond_len = ground_indices.shape[1]
-        x = ground_indices
-        past = None
-        for i in range(satellite_seq_length):
-            logits, _, present = model.transformer.forward_with_past(x, past=past, past_length=(i + cond_len - 1))
-            if past is None:
-                past = [present]
-            else:
-                past.append(present)
-            next_token_logits = logits[:, -1, :] / temperature
-            filtered_logits = top_k_top_p_filtering(next_token_logits, top_k=top_k, top_p=top_p)
-            probs = torch.softmax(filtered_logits, dim=-1)
-            next_token = torch.multinomial(probs, 1)
-            x = next_token
-            sequence = torch.cat([sequence, next_token], dim=1)
-        del past
-
-        generated_tokens = sequence[:, -satellite_seq_length:]
+        generated_tokens = _mgpt.sample_with_past(
+            ground_indices, model.transformer, steps=satellite_seq_length,
+            temperature=temperature, sample_logits=True, top_k=top_k, top_p=top_p
+        )
         
         # Decode
         h = w = 16

@@ -17,8 +17,9 @@ if _taming_path not in sys.path:
 
 from taming.models.vqgan import VQModel
 from taming.models.cond_transformer import Net2NetTransformer
-from fixermodule import fix_inject_rope
+from fixermodule import fix_inject_rope, fix_inject_kv_cache
 fix_inject_rope()
+fix_inject_kv_cache()
 
 # GET AVAILABLE DEVICE
 def getDevice():
