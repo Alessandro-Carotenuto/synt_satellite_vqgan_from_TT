@@ -43,8 +43,10 @@ Built on top of [Taming Transformers](https://github.com/CompVis/taming-transfor
 Each row shows a ground-level panorama (left), the model's generated satellite image (centre), and the true satellite image (right). LPIPS scores are computed against the true satellite.
 
 <p align="center">
-  <img src="readme%20assets/G2A%202.png" alt="Generation examples, forest road and mountain road" width="48%" />
-  <img src="readme%20assets/G2A%203.png" alt="Generation examples, farmland and lakeside road" width="48%" />
+  <img src="readme%20assets/G2A%202.png" alt="Generation examples, forest road and mountain road" width="75%" />
+</p>
+<p align="center">
+  <img src="readme%20assets/G2A%203.png" alt="Generation examples, farmland and lakeside road" width="75%" />
 </p>
 
 ---
@@ -100,7 +102,7 @@ This project was trained on a custom subset of **35,191 image pairs** extracted 
 ### How to obtain the data
 
 1. **Request access to CVUSA** from the original authors at:
-   [https://mvrl.cse.wustl.edu/datasets/cvusa/request_access.html](https://mvrl.cse.wustl.edu/datasets/cvusa/request_access.html)
+   [https://mvrl.cse.wustl.edu/datasets/cvusa/](https://mvrl.cse.wustl.edu/datasets/cvusa/)
 
 2. **Build your own subset** from the full dataset, following the structure described below. The code expects image pairs (ground-level panorama + polar-projected aerial image) organised in a specific folder and CSV layout.
 
